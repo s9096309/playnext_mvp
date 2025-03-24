@@ -2,6 +2,37 @@
 
 import math
 import requests
+from collections import defaultdict
+import os
+import requests
+from dotenv import load_dotenv
+
+load_dotenv()
+
+IGDB_CLIENT_ID = os.getenv("IGDB_CLIENT_ID")
+IGDB_CLIENT_SECRET = os.getenv("IGDB_CLIENT_SECRET")
+
+def get_igdb_access_token():
+    """Fetches an IGDB access token."""
+    url = f"https://id.twitch.tv/oauth2/token?client_id={IGDB_CLIENT_ID}&client_secret={IGDB_CLIENT_SECRET}&grant_type=client_credentials"
+    response = requests.post(url)
+    response.raise_for_status()  # Raise an exception for bad status codes (4xx or 5xx)
+    return response.json()["access_token"]
+
+def get_igdb_game_data(igdb_id):
+    """Fetches game data from the IGDB API."""
+    access_token = get_igdb_access_token()
+    url = "https://api.igdb.com/v4/games"
+    headers = {
+        "Client-ID": IGDB_CLIENT_ID,
+        "Authorization": f"Bearer {access_token}",
+        "Accept": "application/json",
+    }
+    data = f'fields name, summary, genres.name, platforms.name; where id = {igdb_id};'
+    response = requests.post(url, headers=headers, data=data)
+    response.raise_for_status()
+    return response.json()
+
 
 def cosine_similarity(user1_ratings, user2_ratings):
     """Calculates cosine similarity between two users' ratings."""
@@ -70,4 +101,60 @@ def calculate_user_similarities(user_ratings, similarity_function):
             similarities[f"({user2_id}, {user1_id})"] = similarity  # Similarity is symmetric
 
     print(f"Final Similarities: {similarities}") #inspect final similarities
+    return similarities
+
+def create_item_user_matrix(ratings):
+    """Creates an item-user rating matrix from ratings data."""
+    print("Ratings received:")
+    for rating in ratings:
+        print(f"  - User: {rating.user_id}, Game: {rating.game_id}, Rating: {rating.rating}")
+    matrix = defaultdict(dict)
+    for rating in ratings:
+        matrix[rating.game_id][rating.user_id] = rating.rating
+    print("Item-User Matrix:")
+    for game_id, users in matrix.items():
+        print(f"  - Game: {game_id}, Users: {users}")
+    return matrix
+
+def calculate_item_similarity(item_user_matrix):
+    """Calculates item-item similarities using cosine similarity."""
+    print("item_user_matrix received:", item_user_matrix)
+    item_ids = list(item_user_matrix.keys())
+    print(f"item_ids: {item_ids}")
+    similarities = {}
+
+    for i in range(len(item_ids)):
+        for j in range(i + 1, len(item_ids)):
+            item1_id = item_ids[i]
+            item2_id = item_ids[j]
+            print(f"Comparing item {item1_id} and {item2_id}")
+
+            item1_ratings = item_user_matrix[item1_id]
+            item2_ratings = item_user_matrix[item2_id]
+            print(f"item1_ratings: {item1_ratings}")
+            print(f"item2_ratings: {item2_ratings}")
+
+            if not isinstance(item1_ratings, dict) or not isinstance(item2_ratings, dict):
+                print(f"Skipping similarity calculation for {item1_id} and {item2_id} due to invalid ratings data.")
+                continue
+
+            common_users = set(item1_ratings.keys()) & set(item2_ratings.keys())
+            print(f"common_users: {common_users}")
+
+            if not common_users:
+                similarity = 0
+            else:
+                dot_product = sum(item1_ratings[user] * item2_ratings[user] for user in common_users)
+                magnitude1 = math.sqrt(sum(item1_ratings[user] ** 2 for user in common_users))
+                magnitude2 = math.sqrt(sum(item2_ratings[user] ** 2 for user in common_users))
+
+                if magnitude1 == 0 or magnitude2 == 0:
+                    similarity = 0
+                else:
+                    similarity = dot_product / (magnitude1 * magnitude2)
+
+            similarities[f"({item1_id}, {item2_id})"] = similarity
+            similarities[f"({item2_id}, {item1_id})"] = similarity #symmetric similarity.
+            print(f"similarity between {item1_id} and {item2_id}: {similarity}")
+
     return similarities
