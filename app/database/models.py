@@ -14,7 +14,7 @@ class User(Base):
     password_hash = Column(String)
     registration_date = Column(DateTime)
     user_age = Column(Integer)
-
+    igdb_id = Column(Integer, nullable=True)
     # Relationships
     backlog_items = relationship("BacklogItem", back_populates="user")
     recommendations = relationship("Recommendation", back_populates="user")
@@ -29,6 +29,7 @@ class Game(Base):
     release_date = Column(Date)
     platform = Column(String)
     igdb_id = Column(Integer, unique=True, index=True)
+    image_url =Column(String)
 
     # Relationships
     backlog_items = relationship("BacklogItem", back_populates="game")
