@@ -39,8 +39,8 @@ class GameBase(BaseModel):
     release_date: date
     platform: str
     igdb_id: int
-    image_url: str  # Added image_url
-    age_rating: Optional[int] = None #Added age rating
+    image_url: Optional[str] = None
+    age_rating: Optional[str] = None #age rating is now string
 
 class GameCreate(GameBase):
     pass
@@ -51,8 +51,8 @@ class GameUpdate(BaseModel):
     release_date: Optional[date] = None
     platform: Optional[str] = None
     igdb_id: Optional[int] = None
-    image_url: Optional[str] = None #added image url
-    age_rating: Optional[int] = None #added age rating
+    image_url: Optional[str] = None
+    age_rating: Optional[str] = None #age rating is now string
 
 class Game(GameBase):
     game_id: int

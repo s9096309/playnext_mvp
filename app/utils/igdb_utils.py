@@ -80,3 +80,34 @@ def get_cover_url(cover_id):
     except Exception as e:
         print(f"Error getting cover url from IGDB: {e}")
         return None
+
+IGDB_AGE_RATING_MAP = {
+    1: "3",
+    2: "7",
+    3: "12",
+    4: "16",
+    5: "18",
+    6: "RP",
+    7: "EC",
+    8: "E",
+    9: "E10+",
+    10: "T",
+    11: "M",
+    12: "AO",
+    13: "CUSA",
+    14: "PEGI 3",
+    15: "PEGI 7",
+    16: "PEGI 12",
+    17: "PEGI 16",
+    18: "PEGI 18",
+    19: "ACB E",
+    20: "ACB PG",
+    21: "ACB M",
+    22: "ACB MA15+",
+    23: "ACB AV15+",
+    24: "ACB R18+",
+    25: "ACB RC",
+}
+
+def map_igdb_age_rating(igdb_rating):
+    return IGDB_AGE_RATING_MAP.get(igdb_rating)
