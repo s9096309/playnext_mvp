@@ -27,19 +27,23 @@ def create_game(title: str = Query(..., description="Game title"), db: Session =
     if 'cover' in igdb_game and igdb_game['cover']:
         cover_data = igdb_utils.get_cover_url(igdb_game['cover']['id'])
         if cover_data:
-            image_url = cover_data.replace("t_thumb", "t_cover_big")
+            image_url = cover_data
 
     age_rating = None
     if 'age_ratings' in igdb_game and igdb_game['age_ratings']:
-        age_rating = igdb_game['age_ratings'][0].get('rating')
+        igdb_age_ratings = igdb_game['age_ratings']
+        mapped_ratings = [igdb_utils.map_igdb_age_rating(rating['rating']) for rating in igdb_age_ratings]
+        valid_ratings = [rating for rating in mapped_ratings if rating is not None]
+        if valid_ratings:
+            age_rating = max(valid_ratings)
+        else:
+            age_rating = None
 
     release_date = "2000-01-01"  # Default date
     if 'release_dates' in igdb_game and igdb_game['release_dates']:
-        # Assuming the first release date is the primary one
         release_date_str = igdb_game['release_dates'][0].get('human')
         if release_date_str:
             try:
-                # Parse the date string
                 release_date = datetime.strptime(release_date_str, "%b %d, %Y").date()
             except ValueError:
                 print(f"Warning: Could not parse release date: {release_date_str}")
@@ -50,22 +54,18 @@ def create_game(title: str = Query(..., description="Game title"), db: Session =
         release_date=release_date,
         platform=", ".join([platform['name'] for platform in igdb_game.get('platforms', [])]),
         igdb_id=igdb_id,
-        image_url=image_url,  # Include image_url here
+        image_url=image_url,
         age_rating=age_rating
     )
 
     return crud.create_game(db=db, game=game_data)
 
-@router.get("/{game_id}", response_model=schemas.Game)
-def read_game(game_id: int, db: Session = Depends(get_db)):
-    db_game = crud.get_game(db, game_id=game_id)
-    if db_game is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Game not found")
-    return db_game
-
 @router.get("/", response_model=list[schemas.Game])
 def read_games(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     games = crud.get_games(db, skip=skip, limit=limit)
+    for game in games:
+        if game.image_url is None:
+            game.image_url = ""
     return games
 
 @router.put("/{game_id}", response_model=schemas.Game)
@@ -92,18 +92,15 @@ def search_games(query: str, db: Session = Depends(get_db)):
     for igdb_game in igdb_games:
         image_url = ""
         if 'cover' in igdb_game and igdb_game['cover']:
-            cover_data = igdb_utils.get_cover_url(igdb_game['cover']['id']) # Corrected line
-
+            cover_data = igdb_utils.get_cover_url(igdb_game['cover']['id'])
             if cover_data:
-                image_url = "https:" + cover_data[0]['url'].replace("t_thumb", "t_cover_big")
+                image_url = cover_data.replace("t_thumb", "t_cover_big")
 
         release_date = "2000-01-01"  # Default date
         if 'release_dates' in igdb_game and igdb_game['release_dates']:
-            # Assuming the first release date is the primary one
             release_date_str = igdb_game['release_dates'][0].get('human')
             if release_date_str:
                 try:
-                    # Parse the date string
                     release_date = datetime.strptime(release_date_str, "%b %d, %Y").date()
                 except ValueError:
                     print(f"Warning: Could not parse release date: {release_date_str}")
@@ -115,7 +112,8 @@ def search_games(query: str, db: Session = Depends(get_db)):
             release_date=release_date,
             platform=", ".join([platform['name'] for platform in igdb_game.get('platforms', [])]),
             igdb_id=igdb_game.get('id', 0),
-            image_url=image_url
+            image_url=image_url,
+            age_rating=None #age rating is now a string.
         )
         games.append(game)
 
