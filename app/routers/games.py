@@ -25,9 +25,9 @@ def create_game(title: str = Query(..., description="Game title"), db: Session =
 
     image_url = ""
     if 'cover' in igdb_game and igdb_game['cover']:
-        cover_data = igdb_utils.get_cover_url(igdb_game['cover'])
+        cover_data = igdb_utils.get_cover_url(igdb_game['cover']['id'])
         if cover_data:
-            image_url = "https:" + cover_data[0]['url'].replace("t_thumb", "t_cover_big")
+            image_url = cover_data.replace("t_thumb", "t_cover_big")
 
     age_rating = None
     if 'age_ratings' in igdb_game and igdb_game['age_ratings']:
@@ -50,7 +50,7 @@ def create_game(title: str = Query(..., description="Game title"), db: Session =
         release_date=release_date,
         platform=", ".join([platform['name'] for platform in igdb_game.get('platforms', [])]),
         igdb_id=igdb_id,
-        image_url=image_url,
+        image_url=image_url,  # Include image_url here
         age_rating=age_rating
     )
 
@@ -92,7 +92,8 @@ def search_games(query: str, db: Session = Depends(get_db)):
     for igdb_game in igdb_games:
         image_url = ""
         if 'cover' in igdb_game and igdb_game['cover']:
-            cover_data = igdb_utils.get_cover_url(igdb_game['cover'])
+            cover_data = igdb_utils.get_cover_url(igdb_game['cover']['id']) # Corrected line
+
             if cover_data:
                 image_url = "https:" + cover_data[0]['url'].replace("t_thumb", "t_cover_big")
 

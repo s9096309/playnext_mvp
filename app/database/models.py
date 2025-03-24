@@ -20,16 +20,17 @@ class User(Base):
     recommendations = relationship("Recommendation", back_populates="user")
     ratings = relationship("Ratings", back_populates="user")
 
-class Game(Base):
-    __tablename__ = "games"
+    class Game(Base):
+        __tablename__ = "games"
 
-    game_id = Column(Integer, primary_key=True, index=True)
-    game_name = Column(String)
-    genre = Column(String)
-    release_date = Column(Date)
-    platform = Column(String)
-    igdb_id = Column(Integer, unique=True, index=True)
-    image_url =Column(String)
+        game_id = Column(Integer, primary_key=True, index=True)
+        game_name = Column(String, index=True)
+        genre = Column(String)
+        release_date = Column(Date)
+        platform = Column(String)
+        igdb_id = Column(Integer, unique=True, index=True)
+        image_url = Column(String)
+        age_rating = Column(Integer)
 
     # Relationships
     backlog_items = relationship("BacklogItem", back_populates="game")
