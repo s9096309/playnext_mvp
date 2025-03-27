@@ -79,7 +79,7 @@ def read_users_me_backlog(current_user: models.User = Depends(get_current_user),
     backlog_items = crud.get_user_backlog(db, user_id=current_user.user_id)
     return backlog_items
 
-@router.get("/me/ratings", response_model=list[schemas.Ratings])
+@router.get("/me/ratings", response_model=list[schemas.Rating])
 def read_users_me_ratings(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     """
     Get the ratings of the currently authenticated user.

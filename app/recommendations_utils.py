@@ -158,3 +158,21 @@ def calculate_item_similarity(item_user_matrix):
             print(f"similarity between {item1_id} and {item2_id}: {similarity}")
 
     return similarities
+
+def predict_rating(user_id, game_id, user_ratings, user_similarities):
+    """Predicts the rating a user would give to a game."""
+
+    numerator = 0
+    denominator = 0
+    for other_user_ids, similarity in user_similarities.items():
+        u1, u2 = map(int, other_user_ids.strip('()').split(', '))
+        other_user_id = u2 if u1 == user_id else u1
+
+        if game_id in user_ratings.get(other_user_id, {}):
+            numerator += similarity * user_ratings[other_user_id][game_id]
+            denominator += abs(similarity)
+
+    if denominator == 0:
+        return 0  # No similar users rated the game
+
+    return numerator / denominator

@@ -1,5 +1,5 @@
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Response, Request
 from sqlalchemy.orm import Session
 from app.database import crud, schemas
 from app.database.session import get_db
@@ -118,3 +118,11 @@ def search_games(query: str, db: Session = Depends(get_db)):
         games.append(game)
 
     return games
+
+@router.options("/")
+async def games_options(request: Request):
+    return Response(status_code=200, headers={
+        "Access-Control-Allow-Origin": "file://",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+        "Access-Control-Allow-Headers": "Authorization, Content-Type",
+    })

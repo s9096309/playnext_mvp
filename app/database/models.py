@@ -16,11 +16,9 @@ class User(Base):
     user_age = Column(Integer)
     igdb_id = Column(Integer, nullable=True)
 
-
-    # Relationships
     backlog_items = relationship("BacklogItem", back_populates="user")
     recommendations = relationship("Recommendation", back_populates="user")
-    ratings = relationship("Ratings", back_populates="user")
+    ratings = relationship("Rating", back_populates="user") #Change here
 
 class Game(Base):
     __tablename__ = "games"
@@ -32,14 +30,13 @@ class Game(Base):
     platform = Column(String)
     igdb_id = Column(Integer, unique=True, index=True)
     image_url = Column(String)
-    age_rating = Column(Integer)
+    age_rating = Column(String) #change here
 
-    # Relationships
     backlog_items = relationship("BacklogItem", back_populates="game")
     recommendations = relationship("Recommendation", back_populates="game")
-    ratings = relationship("Ratings", back_populates="game")
+    ratings = relationship("Rating", back_populates="game") #change here
 
-class BacklogStatus(enum.Enum): # Define an enum for status
+class BacklogStatus(enum.Enum):
     playing = "playing"
     completed = "completed"
     dropped = "dropped"
@@ -54,7 +51,6 @@ class BacklogItem(Base):
     rating = Column(Float)
     play_status = Column(String)
 
-    # Relationships
     user = relationship("User", back_populates="backlog_items")
     game = relationship("Game", back_populates="backlog_items")
 
@@ -68,11 +64,10 @@ class Recommendation(Base):
     recommendation_reason = Column(String)
     documentation_rating = Column(Float)
 
-    # Relationships
     user = relationship("User", back_populates="recommendations")
     game = relationship("Game", back_populates="recommendations")
 
-class Ratings(Base):
+class Rating(Base): #Change Here
     __tablename__ = "ratings"
 
     rating_id = Column(Integer, primary_key=True, index=True)
@@ -82,6 +77,5 @@ class Ratings(Base):
     comment = Column(String)
     rating_date = Column(DateTime)
 
-    # Relationships
     user = relationship("User", back_populates="ratings")
     game = relationship("Game", back_populates="ratings")
