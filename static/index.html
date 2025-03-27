@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Videogame Ratings</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <h1>Videogame Ratings</h1>
+
+    <h2>Games</h2>
+
+    <div id="game-list">
+        </div>
+
+    <h2>Create Rating</h2>
+    <form id="rating-form">
+        <label for="game_id">Game ID:</label><br>
+        <input type="number" id="game_id" name="game_id"><br><br>
+
+        <label for="rating">Rating:</label><br>
+        <input type="number" id="rating" name="rating" min="1" max="10"><br><br>
+
+        <label for="comment">Comment:</label><br>
+        <textarea id="comment" name="comment"></textarea><br><br>
+
+        <label for="rating_date">Rating Date:</label><br>
+        <input type="datetime-local" id="rating_date" name="rating_date"><br><br>
+
+        <input type="submit" value="Submit Rating">
+    </form>
+
+    <script>
+        // Fetch game data and populate the game list
+        fetch('http://localhost:8000/games/')
+        .then(response => response.json())
+        .then(games => {
+        let gameList = document.getElementById('game-list');
+        let table = '<table><tr><th>ID</th><th>Name</th><th>Genre</th><th>Platform</th></tr>';
+        games.forEach(game => {
+            table += `<tr>
+            <td>${game.game_id}</td>
+            <td>${game.game_name}</td>
+            <td>${game.genre}</td>
+            <td>${game.platform}</td>
+            </tr>`;
+        });
+        table += '</table>';
+        gameList.innerHTML = table;
+    });
+
+        // Handle form submission
+        document.getElementById('rating-form').addEventListener('submit', function(event) {
+            event.preventDefault(); // Prevent default form submission
+
+            const gameId = document.getElementById('game_id').value;
+            const rating = document.getElementById('rating').value;
+            const comment = document.getElementById('comment').value;
+            const ratingDate = document.getElementById('rating_date').value;
+
+            fetch('/ratings/me/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsImV4cCI6MTc0MjkyMTU0NX0.Ksn7YhocTjpVhS5AZCupMqWTSqcekFiF-FKWEO01qHU' // Replace with actual JWT token
+                },
+                body: JSON.stringify({
+                    game_id: parseInt(gameId),
+                    rating: parseFloat(rating),
+                    comment: comment,
+                    rating_date: ratingDate
+                })
+            })
+            .then(response => {
+                if (response.ok) {
+                    alert('Rating submitted successfully!');
+                } else {
+                    alert('Failed to submit rating.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred.');
+            });
+        });
+    </script>
+</body>
+</html>

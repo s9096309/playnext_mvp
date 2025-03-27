@@ -40,7 +40,7 @@ class GameBase(BaseModel):
     platform: str
     igdb_id: int
     image_url: Optional[str] = None
-    age_rating: Optional[str] = None #age rating is now string
+    age_rating: Optional[str] = None
 
 class GameCreate(GameBase):
     pass
@@ -108,25 +108,25 @@ class Recommendation(RecommendationBase):
     class Config:
         from_attributes = True
 
-# Ratings Schemas
-class RatingsBase(BaseModel):
+# Rating Schemas
+class RatingBase(BaseModel):
     user_id: int
     game_id: int
     rating: float
     comment: Optional[str] = None
     rating_date: datetime
 
-class RatingsCreate(RatingsBase):
+class RatingCreate(RatingBase):
     pass
 
-class RatingsUpdate(BaseModel):
+class RatingUpdate(BaseModel):
     user_id: Optional[int] = None
     game_id: Optional[int] = None
     rating: Optional[float] = None
     comment: Optional[str] = None
     rating_date: Optional[datetime] = None
 
-class Ratings(RatingsBase):
+class Rating(RatingBase):
     rating_id: int
 
     class Config:
@@ -136,3 +136,9 @@ class Ratings(RatingsBase):
 class Token(BaseModel):
     access_token: str
     token_type: str
+
+class RatingCreateMe(BaseModel):
+    game_id: int
+    rating: float
+    comment: str
+    rating_date: datetime
