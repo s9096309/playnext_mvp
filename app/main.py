@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from.routers import users, games, ratings, recommendations, auth  # Use relative imports
+from.routers import users, games, ratings, recommendations, auth, backlog_items  # Use relative imports
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
@@ -18,4 +18,5 @@ app.include_router(games.router)
 app.include_router(ratings.router)
 app.include_router(recommendations.router)
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
+app.include_router(backlog_items.router)
 

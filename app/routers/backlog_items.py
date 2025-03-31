@@ -81,3 +81,14 @@ def delete_backlog_item(backlog_item_id: int, current_user: models.User = Depend
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to delete this backlog item.")
 
     return crud.delete_backlog_item(db=db, backlog_id=backlog_item_id)
+
+@router.get("/user/{user_id}", response_model=list[schemas.BacklogItem])
+def read_user_backlog(user_id: int, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """
+    Get all backlog items for a specific user.
+    """
+    if user_id != current_user.user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to view this user's backlog.")
+
+    backlog_items = crud.get_user_backlog_items(db, user_id=user_id)
+    return backlog_items

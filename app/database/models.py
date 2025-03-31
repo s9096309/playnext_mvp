@@ -50,7 +50,6 @@ class BacklogItem(Base):
     game_id = Column(Integer, ForeignKey("games.game_id"))
     status = Column(Enum(BacklogStatus))
     rating = Column(Float)
-    play_status = Column(String)
 
     user = relationship("User", back_populates="backlog_items")
     game = relationship("Game", back_populates="backlog_items")
