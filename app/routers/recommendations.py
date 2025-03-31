@@ -1,12 +1,24 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+import google.generativeai as genai
+from fastapi import APIRouter, Depends, HTTPException, status, Body
 from sqlalchemy.orm import Session
 from app.database import crud, schemas, models
 from app.database.session import get_db
 from app.utils.auth import get_current_user
 from app.recommendations_utils import cosine_similarity
 from typing import List
+from datetime import datetime
+import os
+from dotenv import load_dotenv
+from pydantic import BaseModel
+
+load_dotenv()
+
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 router = APIRouter(prefix="/recommendations", tags=["recommendations"])
+
+class UserIDRequest(BaseModel):
+    user_id: int
 
 @router.post("/generate", response_model=List[schemas.Game])
 def generate_recommendations(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
@@ -115,47 +127,49 @@ def get_user_recommendations(user_id: int, current_user: models.User = Depends(g
     return recommended_games
 
 @router.post("/gemini")
-def get_gemini_recommendations(user_id: int, db: Session = Depends(get_db)):
-    user_ratings = crud.get_user_ratings(db, user_id=user_id)
+def get_gemini_recommendations(request: UserIDRequest, db: Session = Depends(get_db)):
+    user_id = request.user_id
+    user_ratings = crud.get_ratings_with_comments_by_user(db, user_id=user_id)
     user_backlog = crud.get_user_backlog(db, user_id=user_id)
 
     prompt = "Recommend 3 video games for user with the following preferences:\n"
     if user_ratings:
         prompt += "High Ratings: "
         for rating in user_ratings:
-            prompt += f"{rating.game.game_name} ({rating.rating} stars), "
+            prompt += f"{rating.game.game_name} ({rating.rating} stars)"
+            if rating.comment:
+                prompt += f" Comments: {rating.comment}"
+            prompt += ", "
         prompt = prompt[:-2] + "\n"
     if user_backlog:
         prompt += f"Backlog: {[item.game.game_name for item in user_backlog]}\n"
 
-    recommendations_text = generate_recommendations(prompt)
-    recommendations = parse_recommendations(recommendations_text)
+    recommendations_text = generate_recommendations_gemini(prompt)
 
-    for recommendation in recommendations:
-        recommendation_data = schemas.RecommendationCreate(
-            user_id=user_id,
-            game_id=0, #set to 0 for now.
-            timestamp=datetime.now(),
-            recommendation_reason=prompt,
-            documentation_rating=None,
-            game_name = recommendation['game_name'],
-            genre = recommendation['genre']
-        )
-        crud.create_recommendation(db, recommendation_data)
+    # Return the full Gemini AI API response
+    return {"gemini_response": recommendations_text}
 
-    return recommendations
 
-def generate_recommendations(prompt: str):
-    # This is where you would integrate with Gemini AI.
-    # For now, let's return a placeholder response.
-    return "1. Game A (RPG), 2. Game B (Action), 3. Game C (Strategy)"
+def generate_recommendations_gemini(prompt: str):
+    model = genai.GenerativeModel('gemini-1.5-pro-latest') #change the model name.
+    try:
+        response = model.generate_content(prompt)
+        return response.text
+    except Exception as e:
+        print(f"Gemini API Error: {e}")
+        return "Gemini API Error"
 
-def parse_recommendations(recommendations_text: str):
+def parse_recommendations_gemini(recommendations_text: str):
     recommendations = []
-    for line in recommendations_text.split("\n"):
-        parts = line.split(". ")
-        if len(parts) == 2:
-            game_parts = parts[1].split(" (")
-            if len(game_parts) == 2:
-                recommendations.append({"game_name": game_parts[0], "genre": game_parts[1][:-1]})
+    lines = recommendations_text.split('\n')
+    for line in lines:
+        if ". **" in line: #check for the start of a recommendation.
+            parts = line.split(". **")
+            if len(parts) == 2:
+                game_name = parts[1].split(':**')[0]
+                recommendations.append({"game_name": game_name, "genre": "Various"}) #genre is not reliably provided.
     return recommendations
+
+@router.post("/test")
+def test_endpoint(request: UserIDRequest): #use request model
+    return {"user_id": request.user_id}

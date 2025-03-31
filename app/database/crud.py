@@ -190,3 +190,9 @@ def get_user_ratings(db: Session, user_id: int):
 
 def get_ratings_by_user(db: Session, user_id: int):
     return db.query(models.Rating).filter(models.Rating.user_id == user_id).all()
+
+def get_ratings_with_comments_by_user(db: Session, user_id: int):
+    return db.query(models.Rating).filter(models.Rating.user_id == user_id).all()
+
+def get_game_by_name(db: Session, game_name: str):
+    return db.query(models.Game).filter(models.Game.game_name == game_name).first()
