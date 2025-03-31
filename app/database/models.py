@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, Date, Enum, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, DateTime, Date, Enum, ForeignKey, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 import enum
@@ -15,10 +15,11 @@ class User(Base):
     registration_date = Column(DateTime)
     user_age = Column(Integer)
     igdb_id = Column(Integer, nullable=True)
+    is_admin = Column(Boolean, default=False)  # Add is_admin column
 
     backlog_items = relationship("BacklogItem", back_populates="user")
     recommendations = relationship("Recommendation", back_populates="user")
-    ratings = relationship("Rating", back_populates="user") #Change here
+    ratings = relationship("Rating", back_populates="user")
 
 class Game(Base):
     __tablename__ = "games"
@@ -30,11 +31,11 @@ class Game(Base):
     platform = Column(String)
     igdb_id = Column(Integer, unique=True, index=True)
     image_url = Column(String)
-    age_rating = Column(String) #change here
+    age_rating = Column(String)
 
     backlog_items = relationship("BacklogItem", back_populates="game")
     recommendations = relationship("Recommendation", back_populates="game")
-    ratings = relationship("Rating", back_populates="game") #change here
+    ratings = relationship("Rating", back_populates="game")
 
 class BacklogStatus(enum.Enum):
     playing = "playing"
@@ -67,7 +68,7 @@ class Recommendation(Base):
     user = relationship("User", back_populates="recommendations")
     game = relationship("Game", back_populates="recommendations")
 
-class Rating(Base): #Change Here
+class Rating(Base):
     __tablename__ = "ratings"
 
     rating_id = Column(Integer, primary_key=True, index=True)

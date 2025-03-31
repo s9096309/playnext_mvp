@@ -10,7 +10,7 @@ from app.utils.auth import get_current_user
 router = APIRouter(prefix="/games", tags=["games"])
 
 @router.post("/", response_model=schemas.Game)
-def create_game(title: str = Query(..., description="Game title"), db: Session = Depends(get_db)):
+def create_game(title: str = Query(..., description="Game title"), db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     """
     Create a game by title, fetching data from IGDB.
     """
@@ -57,7 +57,8 @@ def create_game(title: str = Query(..., description="Game title"), db: Session =
         platform=", ".join([platform['name'] for platform in igdb_game.get('platforms', [])]),
         igdb_id=igdb_id,
         image_url=image_url,
-        age_rating=age_rating
+        age_rating=age_rating,
+        user_id = current_user.user_id #add user ID to created game.
     )
 
     return crud.create_game(db=db, game=game_data)
