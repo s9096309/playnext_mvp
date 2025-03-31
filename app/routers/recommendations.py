@@ -1,117 +1,118 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Body
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.database import crud, schemas, models
 from app.database.session import get_db
-from datetime import datetime
+from typing import List
 import google.generativeai as genai
 import os
 from dotenv import load_dotenv
-from pydantic import BaseModel
-from app.recommendations_utils import get_igdb_game_data
+import json
+import re
 
 load_dotenv()
 
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
-router = APIRouter(prefix="/recommendations", tags=["recommendations"])
-
-class UserIDRequest(BaseModel):
-    user_id: int
-
-def generate_recommendations_gemini(prompt: str):
+async def generate_recommendations_gemini(prompt: str):
+    """Generates recommendations using Gemini API (asynchronously)."""
     model = genai.GenerativeModel('gemini-1.5-pro-latest')
     response = model.generate_content(prompt)
     return response.text
 
-def parse_recommendations_gemini(recommendations_text: str):
-    recommendations = []
-    lines = recommendations_text.split('\n')
-    for line in lines:
-        if ". **" in line:
-            parts = line.split(". **")
-            if len(parts) == 2:
-                game_name = parts[1].split(':**')[0]
-                recommendations.append({"game_name": game_name, "genre": "Various"})
-    return recommendations
+router = APIRouter(prefix="/recommendations", tags=["recommendations"])
 
-@router.post("/test")
-def test_recommendations():
-    return {"message": "Recommendations endpoint is working"}
+@router.post("/user", response_model=schemas.RecommendationResponse)
+async def get_user_recommendations(user_request: schemas.UserRequest, db: Session = Depends(get_db)):
+    """Generates game recommendations using the Gemini API, considering user ratings, backlog, and comments."""
+    user_id = user_request.user_id
 
-@router.post("/gemini")
-def get_gemini_recommendations(request: UserIDRequest, db: Session = Depends(get_db)):
-    user_id = request.user_id
-    user_ratings = crud.get_ratings_with_comments_by_user(db, user_id=user_id)
-    user_backlog = crud.get_user_backlog(db, user_id=user_id)
+    # Fetch user data
+    ratings = crud.get_ratings_by_user(db, user_id=user_id)
+    backlog_items = crud.get_user_backlog_items(db, user_id=user_id)
 
-    prompt = "Recommend 3 video games for user with the following preferences:\n"
-    if user_ratings:
-        prompt += "High Ratings: "
-        for rating in user_ratings:
-            prompt += f"{rating.game.game_name} ({rating.rating} stars)"
-            if rating.comment:
-                prompt += f" Comments: {rating.comment}"
-            prompt += ", "
-        prompt = prompt[:-2] + "\n"
-    if user_backlog:
-        prompt += f"Backlog: {[item.game.game_name for item in user_backlog]}\n"
+    favorite_games = []
+    disliked_games = []
 
-    recommendations_text = generate_recommendations_gemini(prompt)
+    # Process ratings
+    game_ratings = {}
+    for rating in ratings:
+        if rating.game_id not in game_ratings:
+            game_ratings[rating.game_id] = []
+        game_ratings[rating.game_id].append(rating.rating)
 
-    recommendations = parse_recommendations_gemini(recommendations_text)
+    for game_id, game_ratings_list in game_ratings.items():
+        avg_rating = sum(game_ratings_list) / len(game_ratings_list)
+        if avg_rating >= 8.0:
+            favorite_games.append(game_id)
+        elif avg_rating <= 4.0:
+            disliked_games.append(game_id)
 
-    detailed_recommendations = []
-    for recommendation in recommendations:
-        game = crud.get_game_by_name(db, game_name=recommendation['game_name'])
-        if game:
-            igdb_data = get_igdb_game_data(game.igdb_id)
-            igdb_link = f"https://www.igdb.com/games/{igdb_data[0].get('slug', '')}" if igdb_data else None
-            detailed_recommendations.append({
-                "game_name": recommendation['game_name'],
-                "genre": recommendation['genre'],
-                "igdb_link": igdb_link,
-            })
+    # Process backlog items
+    for item in backlog_items:
+        if item.status == schemas.BacklogStatus.completed or item.status == schemas.BacklogStatus.playing:
+            if item.game_id not in favorite_games:
+                favorite_games.append(item.game_id)
+        elif item.status == schemas.BacklogStatus.dropped:
+            if item.game_id not in disliked_games:
+                disliked_games.append(item.game_id)
+        if item.rating:
+            if item.rating >= 8.0 and item.game_id not in favorite_games:
+                favorite_games.append(item.game_id)
+            elif item.rating <= 4.0 and item.game_id not in disliked_games:
+                disliked_games.append(item.game_id)
+
+    # Create strings for prompt
+    favorite_games_string = ", ".join([crud.get_game(db, game_id=game_id).game_name for game_id in favorite_games if crud.get_game(db, game_id=game_id)])
+    disliked_games_string = ", ".join([crud.get_game(db, game_id=game_id).game_name for game_id in disliked_games if crud.get_game(db, game_id=game_id)])
+    backlog_game_names = [crud.get_game(db, game_id=item.game_id).game_name for item in backlog_items if crud.get_game(db, game_id=item.game_id)]
+    backlog_string = ", ".join(backlog_game_names) if backlog_game_names else "None"
+
+    # Construct prompt
+    prompt = f"""
+    The user's favorite games are: {favorite_games_string}.
+    The user's backlog contains: {backlog_string}.
+    The user dislikes: {disliked_games_string}.
+
+    Based on the user's preferences, recommend 3 games, including genre, igdb link, and a short reasoning, in JSON format.
+    Ensure the response is valid JSON and can be parsed directly.
+    """
+
+    # Generate recommendations
+    gemini_response = await generate_recommendations_gemini(prompt)
+
+    structured_recommendations: List[schemas.StructuredRecommendation] = []
+
+    try:
+        # Extract JSON from Gemini response using regex
+        json_match = re.search(r'```json\s*([\s\S]*?)\s*```', gemini_response)
+        if json_match:
+            json_str = json_match.group(1)
+            recommendations_data = json.loads(json_str)
+
+            if isinstance(recommendations_data, list):
+                for item in recommendations_data:
+                    game_name = item.get("name") or item.get("title")  # Check for both "name" and "title"
+                    genre = item.get("genre")
+                    igdb_link = item.get("igdb_link")
+                    reasoning = item.get("reasoning")
+
+                    structured_recommendations.append(schemas.StructuredRecommendation(
+                        game_name=game_name,
+                        genre=genre,
+                        igdb_link=igdb_link,
+                        reasoning=reasoning
+                    ))
+            else:
+                print("Gemini response is not a list.")
         else:
-            # Game not found, add it to the database
-            # Attempt to get data from IGDB
-            try:
-                # search by name, and return the first result.
-                igdb_search_data = crud.search_igdb_game(game_name = recommendation['game_name'])
-                if igdb_search_data:
-                    game_data = igdb_search_data[0]
-                    release_date = datetime.fromtimestamp(game_data.get('first_release_date', 0)).date() if game_data.get('first_release_date') else None
-                    age_rating = str(game_data.get('age_ratings', [{}])[0].get('rating')) if game_data.get('age_ratings') else None
+            print("No JSON found in Gemini response.")
 
-                    new_game = schemas.GameCreate(
-                        game_name=game_data.get('name', recommendation['game_name']),
-                        genre=", ".join([g.get('name') for g in game_data.get('genres', [])]) if game_data.get('genres') else recommendation['genre'],
-                        release_date=release_date,
-                        platform=", ".join([p.get('name') for p in game_data.get('platforms', [])]) if game_data.get('platforms') else None,
-                        igdb_id=game_data.get('id'),
-                        image_url=f"https://images.igdb.com/igdb/image/upload/t_cover_big/{game_data.get('cover', {}).get('image_id')}.jpg" if game_data.get('cover', {}).get('image_id') else None,
-                        age_rating=age_rating,
-                    )
-                    game = crud.create_game(db, game=new_game)
-                    igdb_link = f"https://www.igdb.com/games/{game_data.get('slug', '')}" if game_data.get('slug') else None
-                    detailed_recommendations.append({
-                        "game_name": recommendation['game_name'],
-                        "genre": recommendation['genre'],
-                        "igdb_link": igdb_link,
-                    })
-                else:
-                    detailed_recommendations.append({
-                        "game_name": recommendation['game_name'],
-                        "genre": recommendation['genre'],
-                        "igdb_link": None,
-                    })
-                    print(f"Game '{recommendation['game_name']}' not found in IGDB. Skipping recommendation.")
+    except json.JSONDecodeError:
+        print("Gemini response is not valid JSON.")
+    except Exception as e:
+        print(f"An error occurred: {e}")
 
-            except Exception as e:
-                print(f"Error adding game '{recommendation['game_name']}': {e}")
-                detailed_recommendations.append({
-                    "game_name": recommendation['game_name'],
-                    "genre": recommendation['genre'],
-                    "igdb_link": None,
-                })
-
-    return {"structured_recommendations": detailed_recommendations, "gemini_response": recommendations_text}
+    return schemas.RecommendationResponse(
+        structured_recommendations=structured_recommendations,
+        gemini_response=gemini_response
+    )

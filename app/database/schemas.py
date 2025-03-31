@@ -1,12 +1,34 @@
 from pydantic import BaseModel
 from datetime import datetime, date
-from typing import Optional
+from typing import Optional, List
 import enum
 
 class BacklogStatus(str, enum.Enum):
     playing = "playing"
     completed = "completed"
     dropped = "dropped"
+
+class BacklogItemCreate(BaseModel):
+    user_id: int
+    game_id: int
+    status: BacklogStatus
+    rating: Optional[float] = None
+
+class BacklogItemUpdate(BaseModel):
+    user_id: Optional[int] = None
+    game_id: Optional[int] = None
+    status: Optional[BacklogStatus] = None
+    rating: Optional[float] = None
+
+class BacklogItem(BaseModel):
+    backlog_id: int
+    user_id: int
+    game_id: int
+    status: BacklogStatus
+    rating: Optional[float] = None
+
+    class Config:
+        from_attributes = True
 
 # User Schemas
 class UserBase(BaseModel):
@@ -15,7 +37,7 @@ class UserBase(BaseModel):
     password_hash: str
     registration_date: datetime
     user_age: Optional[int] = None
-    is_admin: bool = False  # Add is_admin field with default value False
+    is_admin: bool = False
 
 class UserCreate(UserBase):
     pass
@@ -26,7 +48,7 @@ class UserUpdate(BaseModel):
     password_hash: Optional[str] = None
     registration_date: Optional[datetime] = None
     user_age: Optional[int] = None
-    is_admin: Optional[bool] = None #make optional for updates.
+    is_admin: Optional[bool] = None
 
 class User(UserBase):
     user_id: int
@@ -54,34 +76,10 @@ class GameUpdate(BaseModel):
     platform: Optional[str] = None
     igdb_id: Optional[int] = None
     image_url: Optional[str] = None
-    age_rating: Optional[str] = None #age rating is now string
+    age_rating: Optional[str] = None
 
 class Game(GameBase):
     game_id: int
-
-    class Config:
-        from_attributes = True
-
-# BacklogItem Schemas
-class BacklogItemBase(BaseModel):
-    user_id: int
-    game_id: int
-    status: BacklogStatus
-    rating: Optional[float] = None
-    play_status: Optional[str] = None
-
-class BacklogItemCreate(BacklogItemBase):
-    pass
-
-class BacklogItemUpdate(BaseModel):
-    user_id: Optional[int] = None
-    game_id: Optional[int] = None
-    status: Optional[BacklogStatus] = None
-    rating: Optional[float] = None
-    play_status: Optional[str] = None
-
-class BacklogItem(BacklogItemBase):
-    backlog_id: int
 
     class Config:
         from_attributes = True
@@ -134,13 +132,29 @@ class Rating(RatingBase):
     class Config:
         from_attributes = True
 
-
+# Token Schema
 class Token(BaseModel):
     access_token: str
     token_type: str
 
+# Rating for Current User Schema
 class RatingCreateMe(BaseModel):
     game_id: int
     rating: float
     comment: str
     rating_date: datetime
+
+# Recommendation Response Schemas
+class StructuredRecommendation(BaseModel):
+    game_name: str
+    genre: str
+    igdb_link: Optional[str] = None
+    reasoning: Optional[str] = None
+
+class RecommendationResponse(BaseModel):
+    structured_recommendations: List[StructuredRecommendation]
+    gemini_response: str
+
+# User Request schema
+class UserRequest(BaseModel):
+    user_id: int

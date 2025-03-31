@@ -1,8 +1,10 @@
 from sqlalchemy.orm import Session
+from sqlalchemy import desc, asc
 from . import models, schemas
 import requests
 import os
 from dotenv import load_dotenv
+from typing import Optional, List
 
 load_dotenv()
 
@@ -40,23 +42,31 @@ def create_game(db: Session, game: schemas.GameCreate):
 def get_game(db: Session, game_id: int):
     return db.query(models.Game).filter(models.Game.game_id == game_id).first()
 
-def get_game_by_name(db: Session, game_name: str, threshold=85): #increased threshold
+def get_game_by_name(db: Session, game_name: str, threshold=85):
     from fuzzywuzzy import fuzz
     games = db.query(models.Game).all()
     best_match = None
     best_ratio = 0
 
     for game in games:
-        ratio = fuzz.token_sort_ratio(game_name, game.game_name) #using token sort ratio
-        print(f"Comparing '{game_name}' to '{game.game_name}': Ratio = {ratio}") #Debug print
+        ratio = fuzz.token_sort_ratio(game_name, game.game_name)
         if ratio > best_ratio and ratio >= threshold:
             best_ratio = ratio
             best_match = game
-    print(f"Fuzzy Match for '{game_name}': {best_match}") #debug print
     return best_match
 
-def get_games(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(models.Game).offset(skip).limit(limit).all()
+def get_games(db: Session, skip: int = 0, limit: int = 100, sort_by: Optional[str] = None, genre: Optional[str] = None, platform: Optional[str] = None):
+    query = db.query(models.Game)
+    if genre:
+        query = query.filter(models.Game.genre == genre)
+    if platform:
+        query = query.filter(models.Game.platform == platform)
+    if sort_by:
+        sort_column = sort_by[1:] if sort_by.startswith("-") else sort_by
+        if hasattr(models.Game, sort_column):
+            order = desc if sort_by.startswith("-") else asc
+            query = query.order_by(order(getattr(models.Game, sort_column)))
+    return query.offset(skip).limit(limit).all()
 
 def create_rating(db: Session, rating: schemas.RatingCreate):
     db_rating = models.Rating(**rating.dict())
@@ -71,10 +81,10 @@ def get_rating(db: Session, rating_id: int):
 def get_ratings(db: Session, skip: int = 0, limit: int = 100):
     return db.query(models.Rating).offset(skip).limit(limit).all()
 
-def get_ratings_by_user(db: Session, user_id: int):
+def get_ratings_by_user(db: Session, user_id: int) -> List[models.Rating]:
     return db.query(models.Rating).filter(models.Rating.user_id == user_id).all()
 
-def get_ratings_with_comments_by_user(db: Session, user_id: int):
+def get_ratings_with_comments_by_user(db: Session, user_id: int) -> List[models.Rating]:
     return db.query(models.Rating).filter(models.Rating.user_id == user_id).all()
 
 def create_backlog_item(db: Session, backlog_item: schemas.BacklogItemCreate):
@@ -87,7 +97,7 @@ def create_backlog_item(db: Session, backlog_item: schemas.BacklogItemCreate):
 def get_backlog_item(db: Session, backlog_id: int):
     return db.query(models.BacklogItem).filter(models.BacklogItem.backlog_id == backlog_id).first()
 
-def get_user_backlog(db: Session, user_id: int):
+def get_user_backlog(db: Session, user_id: int) -> List[models.BacklogItem]:
     return db.query(models.BacklogItem).filter(models.BacklogItem.user_id == user_id).all()
 
 def get_backlog_items(db: Session, skip: int = 0, limit: int = 100):
@@ -108,3 +118,6 @@ def get_user_by_username(db: Session, username: str):
 
 def get_users(db: Session, skip: int = 0, limit: int = 100):
     return db.query(models.User).offset(skip).limit(limit).all()
+
+def get_user_backlog_items(db: Session, user_id: int) -> List[models.BacklogItem]:
+    return db.query(models.BacklogItem).filter(models.BacklogItem.user_id == user_id).all()
