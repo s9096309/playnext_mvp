@@ -4,7 +4,6 @@ PlayNext MVP is a backend API built with FastAPI, designed to manage game-relate
 
 ## Project Structure
 
-
 playnext_mvp/
 ├── alembic/              # Database migration tool
 ├── app/
