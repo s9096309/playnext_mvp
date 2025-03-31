@@ -39,8 +39,21 @@ def delete_user(db: Session, user_id: int):
 def get_game(db: Session, game_id: int):
     return db.query(models.Game).filter(models.Game.game_id == game_id).first()
 
-def get_games(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(models.Game).offset(skip).limit(limit).all()
+def get_game_by_igdb_id(db: Session, igdb_id: int):
+    return db.query(models.Game).filter(models.Game.igdb_id == igdb_id).first()
+
+def get_games(db: Session, skip: int = 0, limit: int = 100, sort_by: Optional[str] = None, genre: Optional[str] = None, platform: Optional[str] = None):
+    query = db.query(models.Game)
+    if genre:
+        query = query.filter(models.Game.genre.like(f"%{genre}%"))
+    if platform:
+        query = query.filter(models.Game.platform.like(f"%{platform}%"))
+    if sort_by:
+        if sort_by == "name":
+            query = query.order_by(models.Game.game_name)
+        elif sort_by == "release_date":
+            query = query.order_by(models.Game.release_date)
+    return query.offset(skip).limit(limit).all()
 
 def create_game(db: Session, game: schemas.GameCreate):
     db_game = db.query(models.Game).filter(models.Game.igdb_id == game.igdb_id).first()

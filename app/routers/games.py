@@ -1,9 +1,11 @@
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Response, Request
 from sqlalchemy.orm import Session
-from app.database import crud, schemas
+from app.database import crud, schemas, models
 from app.database.session import get_db
 from app.utils import igdb_utils
+from typing import Optional
+from app.utils.auth import get_current_user
 
 router = APIRouter(prefix="/games", tags=["games"])
 
@@ -19,7 +21,7 @@ def create_game(title: str = Query(..., description="Game title"), db: Session =
     igdb_game = igdb_games[0]
     igdb_id = igdb_game.get('id')
 
-    db_game = crud.get_game(db, game_id=igdb_id)
+    db_game = crud.get_game_by_igdb_id(db, igdb_id=igdb_id)
     if db_game:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Game already registered")
 
@@ -61,26 +63,30 @@ def create_game(title: str = Query(..., description="Game title"), db: Session =
     return crud.create_game(db=db, game=game_data)
 
 @router.get("/", response_model=list[schemas.Game])
-def read_games(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    games = crud.get_games(db, skip=skip, limit=limit)
+def read_games(skip: int = 0, limit: int = 100, sort_by: Optional[str] = None, genre: Optional[str] = None, platform: Optional[str] = None, db: Session = Depends(get_db)):
+    games = crud.get_games(db, skip=skip, limit=limit, sort_by=sort_by, genre=genre, platform=platform)
     for game in games:
         if game.image_url is None:
             game.image_url = ""
     return games
 
 @router.put("/{game_id}", response_model=schemas.Game)
-def update_game(game_id: int, game: schemas.GameUpdate, db: Session = Depends(get_db)):
+def update_game(game_id: int, game: schemas.GameUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     db_game = crud.get_game(db, game_id=game_id)
     if db_game is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Game not found")
+    if db_game.user_id != current_user.user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to edit this game")
     return crud.update_game(db=db, game_id=game_id, game_update=game)
 
 @router.delete("/{game_id}", response_model=schemas.Game)
-def delete_game(game_id: int, db: Session = Depends(get_db)):
-    db_game = crud.delete_game(db, game_id=game_id)
+def delete_game(game_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    db_game = crud.get_game(db, game_id=game_id)
     if db_game is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Game not found")
-    return db_game
+    if db_game.user_id != current_user.user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to delete this game")
+    return crud.delete_game(db, game_id=game_id)
 
 @router.get("/search/{query}", response_model=list[schemas.Game])
 def search_games(query: str, db: Session = Depends(get_db)):
