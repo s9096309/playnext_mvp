@@ -15,6 +15,7 @@ class UserBase(BaseModel):
     password_hash: str
     registration_date: datetime
     user_age: Optional[int] = None
+    is_admin: bool = False  # Add is_admin field with default value False
 
 class UserCreate(UserBase):
     pass
@@ -25,6 +26,7 @@ class UserUpdate(BaseModel):
     password_hash: Optional[str] = None
     registration_date: Optional[datetime] = None
     user_age: Optional[int] = None
+    is_admin: Optional[bool] = None #make optional for updates.
 
 class User(UserBase):
     user_id: int

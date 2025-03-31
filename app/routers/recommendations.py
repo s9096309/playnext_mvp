@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.database import crud, schemas, models
 from app.database.session import get_db
@@ -10,7 +10,7 @@ router = APIRouter(prefix="/recommendations", tags=["recommendations"])
 
 @router.post("/generate", response_model=List[schemas.Game])
 def generate_recommendations(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    """Generates game recommendations for a user."""
+    """Generates game recommendations for the current user based on collaborative filtering."""
 
     # Get the user's ratings
     user_ratings = crud.get_ratings_by_user(db, user_id=current_user.user_id)
@@ -25,7 +25,7 @@ def generate_recommendations(db: Session = Depends(get_db), current_user: models
     for other_user in all_users:
         if other_user.user_id != current_user.user_id:
             other_user_ratings = crud.get_ratings_by_user(db, user_id=other_user.user_id)
-            #calculate similarity here. This example will just use the amount of shared ratings.
+            # calculate similarity here. This example will just use the amount of shared ratings.
             shared_ratings = 0
             for user_rating in user_ratings:
                 for other_user_rating in other_user_ratings:
@@ -36,7 +36,7 @@ def generate_recommendations(db: Session = Depends(get_db), current_user: models
     # Get games rated by similar users.
     recommended_game_ids = set()
     for other_user_id, similarity in user_similarities.items():
-        if similarity > 0: #only use users with shared ratings.
+        if similarity > 0:  # only use users with shared ratings.
             other_user_ratings = crud.get_ratings_by_user(db, user_id=other_user_id)
             for other_user_rating in other_user_ratings:
                 recommended_game_ids.add(other_user_rating.game_id)
@@ -68,8 +68,10 @@ def create_user_profile(liked_games, db: Session):
                 user_profile[str(game.release_date.year)] = user_profile.get(str(game.release_date.year), 0) + 1
     return user_profile
 
-def generate_content_based_recommendations(user_profile, db: Session = Depends(get_db)) -> List[schemas.Game]:
-    """Generates content-based recommendations."""
+@router.post("/content", response_model=List[schemas.Game])
+def generate_content_based_recommendations(liked_games: List[int], db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)) -> List[schemas.Game]:
+    """Generates content-based recommendations for the current user."""
+    user_profile = create_user_profile(liked_games, db)
     all_games = crud.get_games(db)
     game_similarities = []
 
@@ -91,3 +93,23 @@ def generate_content_based_recommendations(user_profile, db: Session = Depends(g
 
     recommended_games = [game for game, similarity in sorted(game_similarities, key=lambda x: x[1], reverse=True)]
     return recommended_games[:10]
+
+@router.get("/user/{user_id}", response_model=List[schemas.Game])
+def get_user_recommendations(user_id: int, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """
+    Get recommendations for a specific user.
+    """
+    if user_id != current_user.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to view recommendations for this user."
+        )
+
+    user_ratings = crud.get_ratings_by_user(db, user_id=user_id)
+    if not user_ratings:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No ratings found for this user.")
+
+    # Generate recommendations logic here (using existing functions)
+    recommended_games = generate_recommendations(db, current_user)
+
+    return recommended_games
