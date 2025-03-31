@@ -1,15 +1,13 @@
-import google.generativeai as genai
 from fastapi import APIRouter, Depends, HTTPException, status, Body
 from sqlalchemy.orm import Session
 from app.database import crud, schemas, models
 from app.database.session import get_db
-from app.utils.auth import get_current_user
-from app.recommendations_utils import cosine_similarity
-from typing import List
 from datetime import datetime
+import google.generativeai as genai
 import os
 from dotenv import load_dotenv
 from pydantic import BaseModel
+from app.recommendations_utils import get_igdb_game_data
 
 load_dotenv()
 
@@ -20,111 +18,25 @@ router = APIRouter(prefix="/recommendations", tags=["recommendations"])
 class UserIDRequest(BaseModel):
     user_id: int
 
-@router.post("/generate", response_model=List[schemas.Game])
-def generate_recommendations(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    """Generates game recommendations for the current user based on collaborative filtering."""
+def generate_recommendations_gemini(prompt: str):
+    model = genai.GenerativeModel('gemini-1.5-pro-latest')
+    response = model.generate_content(prompt)
+    return response.text
 
-    # Get the user's ratings
-    user_ratings = crud.get_ratings_by_user(db, user_id=current_user.user_id)
+def parse_recommendations_gemini(recommendations_text: str):
+    recommendations = []
+    lines = recommendations_text.split('\n')
+    for line in lines:
+        if ". **" in line:
+            parts = line.split(". **")
+            if len(parts) == 2:
+                game_name = parts[1].split(':**')[0]
+                recommendations.append({"game_name": game_name, "genre": "Various"})
+    return recommendations
 
-    # Get a list of all users.
-    all_users = crud.get_users(db)
-
-    # Create a dictionary to store user similarities.
-    user_similarities = {}
-
-    # Calculate user similarities.
-    for other_user in all_users:
-        if other_user.user_id != current_user.user_id:
-            other_user_ratings = crud.get_ratings_by_user(db, user_id=other_user.user_id)
-            # calculate similarity here. This example will just use the amount of shared ratings.
-            shared_ratings = 0
-            for user_rating in user_ratings:
-                for other_user_rating in other_user_ratings:
-                    if user_rating.game_id == other_user_rating.game_id:
-                        shared_ratings += 1
-            user_similarities[other_user.user_id] = shared_ratings
-
-    # Get games rated by similar users.
-    recommended_game_ids = set()
-    for other_user_id, similarity in user_similarities.items():
-        if similarity > 0:  # only use users with shared ratings.
-            other_user_ratings = crud.get_ratings_by_user(db, user_id=other_user_id)
-            for other_user_rating in other_user_ratings:
-                recommended_game_ids.add(other_user_rating.game_id)
-
-    # Get the game objects from the database.
-    recommended_games = []
-    for game_id in recommended_game_ids:
-        game = crud.get_game(db, game_id=game_id)
-        if game:
-            recommended_games.append(game)
-
-    return recommended_games
-
-def create_user_profile(liked_games, db: Session):
-    """Creates a user profile based on liked games' attributes."""
-    user_profile = {}
-    for game_id in liked_games:
-        game = crud.get_game(db, game_id=game_id)
-        if game:
-            if game.genre:
-                for genre in game.genre.split(", "):
-                    user_profile[genre] = user_profile.get(genre, 0) + 1
-            if game.platform:
-                for platform in game.platform.split(", "):
-                    user_profile[platform] = user_profile.get(platform, 0) + 1
-            if game.age_rating:
-                user_profile[game.age_rating] = user_profile.get(game.age_rating, 0) + 1
-            if game.release_date:
-                user_profile[str(game.release_date.year)] = user_profile.get(str(game.release_date.year), 0) + 1
-    return user_profile
-
-@router.post("/content", response_model=List[schemas.Game])
-def generate_content_based_recommendations(liked_games: List[int], db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)) -> List[schemas.Game]:
-    """Generates content-based recommendations for the current user."""
-    user_profile = create_user_profile(liked_games, db)
-    all_games = crud.get_games(db)
-    game_similarities = []
-
-    for game in all_games:
-        game_vector = {}
-        if game.genre:
-            for genre in game.genre.split(", "):
-                game_vector[genre] = 1
-        if game.platform:
-            for platform in game.platform.split(", "):
-                game_vector[platform] = 1
-        if game.age_rating:
-            game_vector[game.age_rating] = 1
-        if game.release_date:
-            game_vector[str(game.release_date.year)] = 1
-
-        similarity = cosine_similarity(user_profile, game_vector)
-        game_similarities.append((game, similarity))
-
-    recommended_games = [game for game, similarity in sorted(game_similarities, key=lambda x: x[1], reverse=True)]
-    return recommended_games[:10]
-
-@router.get("/user/{user_id}", response_model=List[schemas.Game])
-def get_user_recommendations(user_id: int, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
-    """
-    Get recommendations for a specific user.
-    """
-    if user_id != current_user.user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to view recommendations for this user."
-        )
-
-    user_ratings = crud.get_ratings_by_user(db, user_id=user_id)
-    if not user_ratings:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No ratings found for this user.")
-
-    # Generate recommendations logic here (using existing functions)
-    recommended_games = generate_recommendations(db, current_user)
-
-    return recommended_games
+@router.post("/test")
+def test_recommendations():
+    return {"message": "Recommendations endpoint is working"}
 
 @router.post("/gemini")
 def get_gemini_recommendations(request: UserIDRequest, db: Session = Depends(get_db)):
@@ -146,30 +58,60 @@ def get_gemini_recommendations(request: UserIDRequest, db: Session = Depends(get
 
     recommendations_text = generate_recommendations_gemini(prompt)
 
-    # Return the full Gemini AI API response
-    return {"gemini_response": recommendations_text}
+    recommendations = parse_recommendations_gemini(recommendations_text)
 
+    detailed_recommendations = []
+    for recommendation in recommendations:
+        game = crud.get_game_by_name(db, game_name=recommendation['game_name'])
+        if game:
+            igdb_data = get_igdb_game_data(game.igdb_id)
+            igdb_link = f"https://www.igdb.com/games/{igdb_data[0].get('slug', '')}" if igdb_data else None
+            detailed_recommendations.append({
+                "game_name": recommendation['game_name'],
+                "genre": recommendation['genre'],
+                "igdb_link": igdb_link,
+            })
+        else:
+            # Game not found, add it to the database
+            # Attempt to get data from IGDB
+            try:
+                # search by name, and return the first result.
+                igdb_search_data = crud.search_igdb_game(game_name = recommendation['game_name'])
+                if igdb_search_data:
+                    game_data = igdb_search_data[0]
+                    release_date = datetime.fromtimestamp(game_data.get('first_release_date', 0)).date() if game_data.get('first_release_date') else None
+                    age_rating = str(game_data.get('age_ratings', [{}])[0].get('rating')) if game_data.get('age_ratings') else None
 
-def generate_recommendations_gemini(prompt: str):
-    model = genai.GenerativeModel('gemini-1.5-pro-latest') #change the model name.
-    try:
-        response = model.generate_content(prompt)
-        return response.text
-    except Exception as e:
-        print(f"Gemini API Error: {e}")
-        return "Gemini API Error"
+                    new_game = schemas.GameCreate(
+                        game_name=game_data.get('name', recommendation['game_name']),
+                        genre=", ".join([g.get('name') for g in game_data.get('genres', [])]) if game_data.get('genres') else recommendation['genre'],
+                        release_date=release_date,
+                        platform=", ".join([p.get('name') for p in game_data.get('platforms', [])]) if game_data.get('platforms') else None,
+                        igdb_id=game_data.get('id'),
+                        image_url=f"https://images.igdb.com/igdb/image/upload/t_cover_big/{game_data.get('cover', {}).get('image_id')}.jpg" if game_data.get('cover', {}).get('image_id') else None,
+                        age_rating=age_rating,
+                    )
+                    game = crud.create_game(db, game=new_game)
+                    igdb_link = f"https://www.igdb.com/games/{game_data.get('slug', '')}" if game_data.get('slug') else None
+                    detailed_recommendations.append({
+                        "game_name": recommendation['game_name'],
+                        "genre": recommendation['genre'],
+                        "igdb_link": igdb_link,
+                    })
+                else:
+                    detailed_recommendations.append({
+                        "game_name": recommendation['game_name'],
+                        "genre": recommendation['genre'],
+                        "igdb_link": None,
+                    })
+                    print(f"Game '{recommendation['game_name']}' not found in IGDB. Skipping recommendation.")
 
-def parse_recommendations_gemini(recommendations_text: str):
-    recommendations = []
-    lines = recommendations_text.split('\n')
-    for line in lines:
-        if ". **" in line: #check for the start of a recommendation.
-            parts = line.split(". **")
-            if len(parts) == 2:
-                game_name = parts[1].split(':**')[0]
-                recommendations.append({"game_name": game_name, "genre": "Various"}) #genre is not reliably provided.
-    return recommendations
+            except Exception as e:
+                print(f"Error adding game '{recommendation['game_name']}': {e}")
+                detailed_recommendations.append({
+                    "game_name": recommendation['game_name'],
+                    "genre": recommendation['genre'],
+                    "igdb_link": None,
+                })
 
-@router.post("/test")
-def test_endpoint(request: UserIDRequest): #use request model
-    return {"user_id": request.user_id}
+    return {"structured_recommendations": detailed_recommendations, "gemini_response": recommendations_text}

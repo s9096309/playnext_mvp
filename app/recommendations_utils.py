@@ -1,5 +1,3 @@
-# app/recommendations_utils.py
-
 import math
 import requests
 from collections import defaultdict
@@ -28,11 +26,14 @@ def get_igdb_game_data(igdb_id):
         "Authorization": f"Bearer {access_token}",
         "Accept": "application/json",
     }
-    data = f'fields name, summary, genres.name, platforms.name; where id = {igdb_id};'
+    data = f'fields slug; where id = {igdb_id};'
     response = requests.post(url, headers=headers, data=data)
     response.raise_for_status()
-    return response.json()
-
+    game_data = response.json()
+    print(f"IGDB Data for ID {igdb_id}: {game_data}") #Debug print
+    if game_data and len(game_data) > 0 and 'slug' in game_data[0]:
+      print(f"Slug Value: {game_data[0]['slug']}") #debug print
+    return game_data
 
 def cosine_similarity(user1_ratings, user2_ratings):
     """Calculates cosine similarity between two users' ratings."""
