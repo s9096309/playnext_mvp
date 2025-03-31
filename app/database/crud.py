@@ -1,3 +1,4 @@
+from sqlalchemy import desc, asc
 from sqlalchemy.orm import Session
 from . import models, schemas  # Import your models and schemas
 from typing import Optional
@@ -44,16 +45,22 @@ def get_game_by_igdb_id(db: Session, igdb_id: int):
 
 def get_games(db: Session, skip: int = 0, limit: int = 100, sort_by: Optional[str] = None, genre: Optional[str] = None, platform: Optional[str] = None):
     query = db.query(models.Game)
+
     if genre:
-        query = query.filter(models.Game.genre.like(f"%{genre}%"))
+        query = query.filter(models.Game.genre.ilike(f"%{genre}%"))  # Case-insensitive like search
     if platform:
-        query = query.filter(models.Game.platform.like(f"%{platform}%"))
+        query = query.filter(models.Game.platform.ilike(f"%{platform}%")) # Case-insensitive like search
+
     if sort_by:
-        if sort_by == "name":
-            query = query.order_by(models.Game.game_name)
-        elif sort_by == "release_date":
-            query = query.order_by(models.Game.release_date)
-    return query.offset(skip).limit(limit).all()
+        sort_direction = asc
+        if sort_by.startswith("-"):
+            sort_direction = desc
+            sort_by = sort_by[1:]
+
+        if hasattr(models.Game, sort_by):
+            query = query.order_by(sort_direction(getattr(models.Game, sort_by)))
+
+    return query.offset(skip).limit(limit).all() if query.offset(skip).limit(limit).all() else []
 
 def create_game(db: Session, game: schemas.GameCreate):
     db_game = db.query(models.Game).filter(models.Game.igdb_id == game.igdb_id).first()
