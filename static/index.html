@@ -3,6 +3,24 @@
 <head>
     <title>Videogame Ratings</title>
     <link rel="stylesheet" href="/static/style.css">
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .button-container {
+            display: flex;
+            justify-content: space-around;
+        }
+    </style>
 </head>
 <body>
     <h1>Videogame Ratings</h1>
@@ -10,43 +28,33 @@
     <h2>Games</h2>
 
     <div id="game-list">
-        </div>
-
-    <h2>Create Rating</h2>
-    <form id="rating-form">
-        <label for="game_id">Game ID:</label><br>
-        <input type="number" id="game_id" name="game_id"><br><br>
-
-        <label for="rating">Rating:</label><br>
-        <input type="number" id="rating" name="rating" min="1" max="10"><br><br>
-
-        <label for="comment">Comment:</label><br>
-        <textarea id="comment" name="comment"></textarea><br><br>
-
-        <label for="rating_date">Rating Date:</label><br>
-        <input type="datetime-local" id="rating_date" name="rating_date"><br><br>
-
-        <input type="submit" value="Submit Rating">
-    </form>
+    </div>
 
     <script>
         // Fetch game data and populate the game list
         fetch('http://localhost:8000/games/')
         .then(response => response.json())
         .then(games => {
-        let gameList = document.getElementById('game-list');
-        let table = '<table><tr><th>ID</th><th>Name</th><th>Genre</th><th>Platform</th></tr>';
-        games.forEach(game => {
-            table += `<tr>
-            <td>${game.game_id}</td>
-            <td>${game.game_name}</td>
-            <td>${game.genre}</td>
-            <td>${game.platform}</td>
-            </tr>`;
+            let gameList = document.getElementById('game-list');
+            let table = '<table><tr><th>ID</th><th>Name</th><th>Genre</th><th>Platform</th><th>Actions</th></tr>';
+            games.forEach(game => {
+                table += `<tr>
+                    <td>${game.game_id}</td>
+                    <td>${game.game_name}</td>
+                    <td>${game.genre}</td>
+                    <td>${game.platform}</td>
+                    <td>
+                        <div class="button-container">
+                            <button onclick="viewRatings(${game.game_id})">Ratings</button>
+                            <button onclick="editGame(${game.game_id})">Edit</button>
+                            <button onclick="deleteGame(${game.game_id})">Delete</button>
+                        </div>
+                    </td>
+                </tr>`;
+            });
+            table += '</table>';
+            gameList.innerHTML = table;
         });
-        table += '</table>';
-        gameList.innerHTML = table;
-    });
 
         // Handle form submission
         document.getElementById('rating-form').addEventListener('submit', function(event) {
@@ -82,6 +90,21 @@
                 alert('An error occurred.');
             });
         });
+
+        function viewRatings(gameId) {
+            // Implement logic to view ratings for the game
+            alert(`View ratings for game ID: ${gameId}`);
+        }
+
+        function editGame(gameId) {
+            // Implement logic to edit the game
+            alert(`Edit game ID: ${gameId}`);
+        }
+
+        function deleteGame(gameId) {
+            // Implement logic to delete the game
+            alert(`Delete game ID: ${gameId}`);
+        }
     </script>
 </body>
 </html>
