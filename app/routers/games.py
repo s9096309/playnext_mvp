@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.database import crud, schemas, models
 from app.database.session import get_db
 from app.utils import igdb_utils
-from typing import Optional
+from typing import Optional, List
 from app.utils.auth import get_current_user
 
 router = APIRouter(prefix="/games", tags=["games"])
@@ -89,13 +89,24 @@ def delete_game(game_id: int, db: Session = Depends(get_db), current_user: model
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to delete this game")
     return crud.delete_game(db, game_id=game_id)
 
-@router.get("/search/{query}", response_model=list[schemas.Game])
+@router.get("/search/{query}", response_model=List[schemas.Game])
 def search_games(query: str, db: Session = Depends(get_db)):
+    """
+    Search for games, prioritizing the local database and then IGDB,
+    and storing IGDB results in the database.
+    """
+    # 1. Search local database
+    db_games = crud.search_games_db(db, query=query)
+
+    if db_games:
+        return db_games  # Return local results if found
+
+    # 2. If not found in the local database, search IGDB
     igdb_games = igdb_utils.search_games_igdb(query)
     if not igdb_games:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No games found")
 
-    games = []
+    games: List[schemas.Game] = []
     for igdb_game in igdb_games:
         image_url = ""
         if 'cover' in igdb_game and igdb_game['cover']:
@@ -103,7 +114,15 @@ def search_games(query: str, db: Session = Depends(get_db)):
             if cover_data:
                 image_url = cover_data.replace("t_thumb", "t_cover_big")
 
-        release_date = "2000-01-01"  # Default date
+        age_rating = None
+        if 'age_ratings' in igdb_game and igdb_game['age_ratings']:
+            igdb_age_ratings = igdb_game['age_ratings']
+            mapped_ratings = [igdb_utils.map_igdb_age_rating(rating['rating']) for rating in igdb_age_ratings]
+            valid_ratings = [rating for rating in mapped_ratings if rating is not None]
+            if valid_ratings:
+                age_rating = max(valid_ratings)
+
+        release_date = "2000-01-01"
         if 'release_dates' in igdb_game and igdb_game['release_dates']:
             release_date_str = igdb_game['release_dates'][0].get('human')
             if release_date_str:
@@ -112,17 +131,20 @@ def search_games(query: str, db: Session = Depends(get_db)):
                 except ValueError:
                     print(f"Warning: Could not parse release date: {release_date_str}")
 
-        game = schemas.Game(
-            game_id=0, #change this to a valid game id if needed.
+        game_data = schemas.GameCreate(
             game_name=igdb_game.get('name', ""),
             genre=", ".join([genre['name'] for genre in igdb_game.get('genres', [])]),
             release_date=release_date,
             platform=", ".join([platform['name'] for platform in igdb_game.get('platforms', [])]),
             igdb_id=igdb_game.get('id', 0),
             image_url=image_url,
-            age_rating=None #age rating is now a string.
+            age_rating=age_rating,
+            user_id=None  # User ID is not relevant for searched games
         )
-        games.append(game)
+
+        # Store the IGDB game in the database if it doesn't exist
+        db_game = crud.create_game_if_not_exists(db=db, game=game_data)
+        games.append(db_game)
 
     return games
 
