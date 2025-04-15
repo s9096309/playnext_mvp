@@ -78,7 +78,7 @@
             const urlParams = new URLSearchParams(window.location.search);
             const gameId = urlParams.get('game_id');
 
-            fetch(`http://localhost:8000/ratings/game/${gameId}`)
+            fetch('https://playnext-mvp.onrender.com/games/')
                 .then(response => response.json())
                 .then(ratings => {
                     const ratingsTableBody = document.getElementById('ratings-table-body');
