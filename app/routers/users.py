@@ -24,13 +24,26 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
 
 @router.post("/", response_model=schemas.User)
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    """
-    Create a new user.
-    """
     db_user = crud.get_user_by_username(db, username=user.username)
     if db_user:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username already registered")
-    return crud.create_user(db=db, user=user)
+        raise HTTPException(status_code=400, detail="Username already registered")
+    db_user = crud.get_user_by_email(db, email=user.email)
+    if db_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+
+    hashed_password = hash_password(user.password)  # <--- HERE IS THE HASHING LOGIC
+
+    db_user = crud.create_user(
+        db=db,
+        user=schemas.UserCreateDB(
+            username=user.username,
+            email=user.email,
+            password_hash=hashed_password,  # Use the generated hash
+            user_age=user.user_age,
+        ),
+        is_admin=False
+    )
+    return db_user
 
 
 @router.get("/me", response_model=schemas.User)
@@ -50,7 +63,6 @@ def read_user(user_id: int, current_user: models.User = Depends(get_current_user
     if db_user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     return db_user
-
 
 @router.get("/", response_model=list[schemas.User])
 def read_users(skip: int = 0, limit: int = 100, current_user: models.User = Depends(get_current_user),
