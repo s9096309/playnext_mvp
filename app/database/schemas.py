@@ -34,24 +34,23 @@ class BacklogItem(BaseModel):
 class UserBase(BaseModel):
     username: str
     email: str
-    password_hash: str
-    registration_date: datetime
     user_age: Optional[int] = None
-    is_admin: bool = False
 
 class UserCreate(UserBase):
-    pass
+    password: str
 
-class UserUpdate(BaseModel):
-    username: Optional[str] = None
-    email: Optional[str] = None
-    password_hash: Optional[str] = None
-    registration_date: Optional[datetime] = None
-    user_age: Optional[int] = None
-    is_admin: Optional[bool] = None
+class UserCreateDB(UserBase):
+    password_hash: str
+
+class UserUpdate(UserBase):
+    password: Optional[str] = None
+    # is_admin: Optional[bool] = None  <- Removed from the update schema
 
 class User(UserBase):
     user_id: int
+    password_hash: str  # Important to include this in the User (response) schema
+    registration_date: datetime
+    is_admin: bool
 
     class Config:
         from_attributes = True
