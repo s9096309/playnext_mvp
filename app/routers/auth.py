@@ -1,10 +1,10 @@
-from app.database import user_crud, schemas
-from app.utils.security import verify_password
+from ..database import user_crud, schemas
+from ..utils.security import verify_password
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from app.database.session import get_db
-from app.utils.auth import create_access_token
+from ..database.session import get_db
+from ..utils.auth import create_access_token
 from datetime import timedelta
 
 ACCESS_TOKEN_EXPIRE_MINUTES = 30  # Define the constant here
@@ -21,7 +21,3 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(data={"sub": user.username}, expires_delta=access_token_expires)
     return {"access_token": access_token, "token_type": "bearer"}
-
-@router.post("/test")
-async def test_endpoint():
-    return {"message": "Test endpoint works!"}
