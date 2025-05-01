@@ -5,6 +5,7 @@ import requests
 import os
 from dotenv import load_dotenv
 from typing import Optional, List
+from fuzzywuzzy import fuzz
 
 load_dotenv()
 
@@ -43,7 +44,6 @@ def get_game(db: Session, game_id: int):
     return db.query(models.Game).filter(models.Game.game_id == game_id).first()
 
 def get_game_by_name(db: Session, game_name: str, threshold=85):
-    from fuzzywuzzy import fuzz
     games = db.query(models.Game).all()
     best_match = None
     best_ratio = 0
@@ -85,9 +85,6 @@ def get_rating(db: Session, rating_id: int):
 def get_ratings(db: Session, skip: int = 0, limit: int = 100):
     return db.query(models.Rating).offset(skip).limit(limit).all()
 
-def get_ratings_by_user(db: Session, user_id: int) -> List[models.Rating]:
-    return db.query(models.Rating).filter(models.Rating.user_id == user_id).all()
-
 def get_ratings_with_comments_by_user(db: Session, user_id: int) -> List[models.Rating]:
     return db.query(models.Rating).filter(models.Rating.user_id == user_id).all()
 
@@ -101,64 +98,39 @@ def create_backlog_item(db: Session, backlog_item: schemas.BacklogItemCreate):
 def get_backlog_item(db: Session, backlog_id: int):
     return db.query(models.BacklogItem).filter(models.BacklogItem.backlog_id == backlog_id).first()
 
-def get_user_backlog(db: Session, user_id: int) -> List[models.BacklogItem]:
-    return db.query(models.BacklogItem).filter(models.BacklogItem.user_id == user_id).all()
-
 def get_backlog_items(db: Session, skip: int = 0, limit: int = 100):
     return db.query(models.BacklogItem).offset(skip).limit(limit).all()
 
-def create_user(db: Session, user: schemas.UserCreate):
-    db_user = models.User(**user.dict())
-    db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
-    return db_user
+def get_user_recommendations(db: Session, user_id: int, limit: int = 10):
+    """
+    Retrieves game recommendations for a specific user.
+    This is a simplified example. Real-world recommendations are more complex.
+    """
+    user_ratings = db.query(models.Rating).filter(models.Rating.user_id == user_id).order_by(
+        desc(models.Rating.rating)).limit(5).all()
+    user_backlog = db.query(models.BacklogItem).filter(models.BacklogItem.user_id == user_id).all()
 
-def get_user(db: Session, user_id: int):
-    return db.query(models.User).filter(models.User.user_id == user_id).first()
+    recommended_games = set()
+    seen_game_ids = set(rating.game_id for rating in user_ratings) | set(item.game_id for item in user_backlog)
 
-def get_user_by_username(db: Session, username: str):
-    return db.query(models.User).filter(models.User.username == username).first()
+    # Recommend games with similar genres (very basic)
+    for rating in user_ratings:
+        game = db.query(models.Game).filter(models.Game.game_id == rating.game_id).first()
+        if game and game.genre:
+            genres = [g.strip() for g in game.genre.split(',')]
+            for genre in genres:
+                similar_games = db.query(models.Game).filter(models.Game.genre.like(f"%{genre}%"),
+                                                             models.Game.game_id.notin_(seen_game_ids)).limit(
+                    3).all()
+                for similar_game in similar_games:
+                    recommended_games.add(similar_game)
+                    seen_game_ids.add(similar_game.game_id)
+                    if len(recommended_games) >= limit:
+                        return list(recommended_games)[:limit]
 
-def get_users(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(models.User).offset(skip).limit(limit).all()
+    # Add more recommendation logic here based on platforms, etc.
 
-def get_user_backlog_items(db: Session, user_id: int) -> List[models.BacklogItem]:
-    return db.query(models.BacklogItem).filter(models.BacklogItem.user_id == user_id).all()
-
-def get_user_recommendations(db: Session, user_id: int):
-    # In app/crud.py
-
-    def get_user_recommendations(db: Session, user_id: int, limit: int = 10):
-        """
-        Retrieves game recommendations for a specific user.
-        This is a simplified example. Real-world recommendations are more complex.
-        """
-        user_ratings = db.query(models.Rating).filter(models.Rating.user_id == user_id).order_by(
-            desc(models.Rating.rating)).limit(5).all()
-        user_backlog = db.query(models.BacklogItem).filter(models.BacklogItem.user_id == user_id).all()
-
-        recommended_games = set()
-        seen_game_ids = set(rating.game_id for rating in user_ratings) | set(item.game_id for item in user_backlog)
-
-        # Recommend games with similar genres (very basic)
-        for rating in user_ratings:
-            game = db.query(models.Game).filter(models.Game.game_id == rating.game_id).first()
-            if game and game.genre:
-                genres = [g.strip() for g in game.genre.split(',')]
-                for genre in genres:
-                    similar_games = db.query(models.Game).filter(models.Game.genre.like(f"%{genre}%"),
-                                                                 models.Game.game_id.notin_(seen_game_ids)).limit(
-                        3).all()
-                    for similar_game in similar_games:
-                        recommended_games.add(similar_game)
-                        seen_game_ids.add(similar_game.game_id)
-                        if len(recommended_games) >= limit:
-                            return list(recommended_games)[:limit]
-
-        # Add more recommendation logic here based on platforms, etc.
-
-        return list(recommended_games)[:limit]
+    return list(recommended_games)[:limit]
 
 def search_games_db(db: Session, query: str, limit: int = 10) -> List[models.Game]:
     """
