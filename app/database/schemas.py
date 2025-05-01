@@ -39,6 +39,9 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password: str
 
+class UserCreateDB(UserBase):
+    password_hash: str
+
 class UserUpdate(UserBase):
     password: Optional[str] = None
     # is_admin: Optional[bool] = None  <- Removed from the update schema
