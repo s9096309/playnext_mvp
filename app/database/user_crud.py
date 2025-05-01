@@ -2,6 +2,7 @@
 from sqlalchemy.orm import Session
 from . import models, schemas
 from typing import List
+from datetime import datetime
 
 def get_user(db: Session, user_id: int):
     return db.query(models.User).filter(models.User.user_id == user_id).first()
@@ -19,6 +20,7 @@ def create_user(db: Session, user: schemas.UserCreateDB, is_admin: bool = False)
         password_hash=user.password_hash,
         user_age=user.user_age,
         is_admin=is_admin,
+        registration_date=datetime.utcnow()  # Explicitly set the registration date
     )
     db.add(db_user)
     db.commit()
