@@ -127,7 +127,6 @@ def get_user_backlog_items(db: Session, user_id: int) -> List[models.BacklogItem
     return db.query(models.BacklogItem).filter(models.BacklogItem.user_id == user_id).all()
 
 def get_user_recommendations(db: Session, user_id: int):
-    # In app/crud.py
 
     def get_user_recommendations(db: Session, user_id: int, limit: int = 10):
         """
