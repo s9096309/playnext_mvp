@@ -1,79 +1,42 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from app.database import user_crud, schemas, models
+from app.database import crud, schemas, models, user_crud
 from app.database.session import get_db
-from fastapi.security import OAuth2PasswordBearer
-from app.utils.auth import decode_access_token  # Keep this for JWT
-from app.utils.security import hash_password, verify_password  # Import bcrypt functions
-from app.routers import recommendations  # Import the recommendations router
+from app.utils.auth import get_current_user
+from . import recommendations
 
 router = APIRouter(prefix="/users", tags=["users"])
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
-
-
-async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
-    payload = decode_access_token(token)
-    username: str = payload.get("sub")
-    if username is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-    user = user_crud.get_user_by_username(db, username=username)
-    if user is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
-    return user
-
-
 @router.post("/", response_model=schemas.User)
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    db_user_by_username = user_crud.get_user_by_username(db, username=user.username)
-    if db_user_by_username:
-        raise HTTPException(status_code=400, detail="Username already registered")
-    db_user_by_email = user_crud.get_user_by_email(db, email=user.email)
-    if db_user_by_email:
-        raise HTTPException(status_code=400, detail="Email already registered")
-
-    hashed_password = hash_password(user.password)  # Use the bcrypt hashing function
-
-    db_user = user_crud.create_user(
-        db=db,
-        user=schemas.UserCreateDB(
-            username=user.username,
-            email=user.email,
-            password_hash=hashed_password,  # Store the bcrypt hash
-            user_age=user.user_age,
-        ),
-        is_admin=False
-    )
-    return db_user
-
+    db_user = crud.get_user_by_username(db, username=user.username)
+    if db_user:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username already registered")
+    db_user = crud.get_user_by_email(db, email=user.email)
+    if db_user:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
+    return crud.create_user(db=db, user=schemas.UserCreateDB(**user.dict()))
 
 @router.get("/me", response_model=schemas.User)
-def read_users_me(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
-    """
-    Get the profile of the currently authenticated user.
-    """
+def read_current_user(current_user: models.User = Depends(get_current_user)):
     return current_user
-
 
 @router.get("/{user_id}", response_model=schemas.User)
 def read_user(user_id: int, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
-    """
-    Get the profile of a specific user.
-    """
-    db_user = user_crud.get_user(db, user_id=user_id)
+    db_user = crud.get_user(db, user_id=user_id)
     if db_user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     return db_user
 
 @router.get("/", response_model=list[schemas.User])
-def read_users(skip: int = 0, limit: int = 100, current_user: models.User = Depends(get_current_user),
-               db: Session = Depends(get_db)):
-    """
-    Get a list of users.
-    """
-    users = user_crud.get_users(db, skip=skip, limit=limit)
+def read_users(skip: int = 0, limit: int = 100, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to read all users."
+        )
+    users = crud.get_users(db, skip=skip, limit=limit)
     return users
-
 
 @router.put("/{user_id}", response_model=schemas.User)
 def update_user(user_id: int, user: schemas.UserUpdate, current_user: models.User = Depends(get_current_user),
@@ -84,12 +47,10 @@ def update_user(user_id: int, user: schemas.UserUpdate, current_user: models.Use
     if user_id != current_user.user_id and not current_user.is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to update this user")
 
-    # You might need to handle password updates here using bcrypt as well
-    db_user = user_crud.update_user(db, user_id=user_id, user_update=user)
+    db_user = crud.update_user(db, user_id=user_id, user_update=user)
     if db_user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     return db_user
-
 
 @router.delete("/{user_id}", response_model=schemas.User)
 def delete_user(user_id: int, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -99,11 +60,19 @@ def delete_user(user_id: int, current_user: models.User = Depends(get_current_us
     if user_id != current_user.user_id and not current_user.is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to delete this user")
 
-    db_user = user_crud.delete_user(db, user_id=user_id)
+    db_user = crud.delete_user(db, user_id=user_id)
     if db_user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     return db_user
 
+@router.put("/me", response_model=schemas.User)
+def update_current_user(user_update: schemas.UserUpdate, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    return crud.update_user(db=db, user_id=current_user.user_id, user=user_update)
+
+@router.delete("/me", response_model=schemas.User)
+def delete_current_user(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    crud.delete_user(db, user_id=current_user.user_id)
+    return current_user
 
 @router.get("/me/backlog", response_model=list[schemas.BacklogItem])
 def read_users_me_backlog(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -113,7 +82,6 @@ def read_users_me_backlog(current_user: models.User = Depends(get_current_user),
     backlog_items = user_crud.get_user_backlog(db, user_id=current_user.user_id)
     return backlog_items
 
-
 @router.get("/me/ratings", response_model=list[schemas.Rating])
 def read_users_me_ratings(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     """
@@ -121,7 +89,6 @@ def read_users_me_ratings(current_user: models.User = Depends(get_current_user),
     """
     ratings = user_crud.get_ratings_by_user(db, user_id=current_user.user_id)
     return ratings
-
 
 @router.get("/me/recommendations", response_model=schemas.RecommendationResponse)
 async def read_users_me_recommendations(current_user: models.User = Depends(get_current_user),

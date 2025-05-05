@@ -9,7 +9,7 @@ from datetime import timedelta
 
 ACCESS_TOKEN_EXPIRE_MINUTES = 30  # Define the constant here
 
-router = APIRouter(prefix="/auth", tags=["authentication"])
+router = APIRouter()
 
 @router.post("/token", response_model=schemas.Token)
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
