@@ -107,7 +107,7 @@ def get_user_backlog(db: Session, user_id: int) -> List[models.BacklogItem]:
 def get_backlog_items(db: Session, skip: int = 0, limit: int = 100):
     return db.query(models.BacklogItem).offset(skip).limit(limit).all()
 
-def create_user(db: Session, user: schemas.UserCreate):
+def create_user(db: Session, user: schemas.UserCreateDB):
     db_user = models.User(**user.dict())
     db.add(db_user)
     db.commit()
