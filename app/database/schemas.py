@@ -41,6 +41,8 @@ class UserCreate(UserBase):
 
 class UserCreateDB(UserBase):
     password_hash: str
+    registration_date: datetime
+    is_admin: bool
 
 class UserUpdate(UserBase):
     password: Optional[str] = None
