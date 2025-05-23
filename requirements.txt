@@ -174,3 +174,5 @@ yarg==0.1.9
 zipp==3.20.2
 pyasn1==0.4.8
 python-jose==3.3.0
+pytest-cov
+pytest-pep8
