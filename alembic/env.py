@@ -5,13 +5,27 @@ from sqlalchemy import pool
 
 from alembic import context
 from app.database.models import Base
-import os
+import os # Make sure os is imported
 import sys
 
 sys.path.append(os.getcwd())  # Add the project's root directory to sys.path
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
+
+# Get the database URL from the environment variable
+DATABASE_URL = os.environ.get("DATABASE_URL")
+
+if DATABASE_URL:
+    # Set the sqlalchemy.url option in the Alembic config object
+    # This is what engine_from_config will then pick up
+    config.set_main_option("sqlalchemy.url", DATABASE_URL)
+else:
+    # This block handles cases where DATABASE_URL is not set.
+    # In CI, it should always be set, but it's good for local testing or debugging.
+    print("WARNING: DATABASE_URL environment variable is not set. Migrations might fail.")
+    # You could also raise an error here if a DB URL is strictly required.
+    # raise Exception("DATABASE_URL environment variable is not set!")
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
@@ -43,6 +57,7 @@ def run_migrations_offline() -> None:
     encrypt_script.py output.
 
     """
+    # This line is okay as it reads from the config, which we now set above
     url = config.get_main_option("sqlalchemy.url")
     context.configure(
         url=url,
@@ -62,6 +77,7 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
+    # This function will now correctly find 'sqlalchemy.url' in 'config'
     connectable = engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
