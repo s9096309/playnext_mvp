@@ -77,7 +77,10 @@ jobs:
 
     - name: Run Tests with Coverage
       # Execute your pytest tests and collect code coverage data
+      env:
+        PYTHONPATH: . # This tells Python to look for modules in the current directory (project root)
       run: |
+        
         pytest tests/ --cov=app --cov-report=xml --cov-report=term-missing
         # --cov=app: Collects coverage for code within the 'app' directory
         # --cov-report=xml: Generates a coverage.xml file (useful for tools like Codecov)
