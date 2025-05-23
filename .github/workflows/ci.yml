@@ -47,11 +47,12 @@ jobs:
 
     - name: Set up environment variables for PostgreSQL and Secrets
       run: |
-        # Set DATABASE_URL for your application to connect to the test PostgreSQL service
+        # Set the DATABASE_URL to connect to the PostgreSQL service
         echo "DATABASE_URL=postgresql://test_user:test_password@localhost:5432/test_db" >> $GITHUB_ENV
-        # Retrieve and set your sensitive keys from GitHub Secrets
-        echo "SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}" >> $GITHUB_ENV
-        echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> $GITHUB_ENV
+        
+        # Use printf %s to avoid issues with potential newlines or special chars in secrets
+        printf "SECRET_KEY=%s\n" "${{ secrets.JWT_SECRET_KEY }}" >> $GITHUB_ENV
+        printf "GEMINI_API_KEY=%s\n" "${{ secrets.GEMINI_API_KEY }}" >> $GITHUB_ENV
 
     - name: Wait for PostgreSQL to be ready
       # Use psql to actively wait for the database to be up and accepting connections
