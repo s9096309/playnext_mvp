@@ -53,6 +53,8 @@ jobs:
         # Use printf %s to avoid issues with potential newlines or special chars in secrets
         printf "SECRET_KEY=%s\n" "${{ secrets.JWT_SECRET_KEY }}" >> $GITHUB_ENV
         printf "GEMINI_API_KEY=%s\n" "${{ secrets.GEMINI_API_KEY }}" >> $GITHUB_ENV
+        printf "IGDB_CLIENT_ID=%s\n" "${{ secrets.IGDB_CLIENT_ID }}" >> $GITHUB_ENV
+        printf "IGDB_APP_ACCESS_TOKEN=%s\n" "${{ secrets.IGDB_APP_ACCESS_TOKEN }}" >> $GITHUB_ENV
 
     - name: Wait for PostgreSQL to be ready
       # Use psql to actively wait for the database to be up and accepting connections
