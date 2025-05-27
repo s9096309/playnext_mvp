@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from app.database import crud, schemas, models, user_crud
+from app.database import models, schemas
 from app.database.session import get_db
-from app.utils.auth import get_current_user
-from . import recommendations
+# FROM app.database import crud  <-- REMOVE OR COMMENT THIS OUT
+from app.database import user_crud # <-- ADD THIS LINE
+from app.utils.auth import get_current_user # Assuming this handles authentication
+
 
 router = APIRouter(prefix="/users", tags=["users"])
 

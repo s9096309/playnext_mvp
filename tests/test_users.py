@@ -7,7 +7,8 @@ from datetime import datetime, timedelta
 from app.main import app
 from app.database import models, schemas
 from app.utils.auth import create_access_token
-
+from app.database import user_crud
+from app.database.user_crud import get_user_by_email, update_user, delete_user # <--- Import specific functions
 
 # Removed direct database setup imports (create_engine, sessionmaker, Base, get_db)
 # as they are handled by conftest.py
