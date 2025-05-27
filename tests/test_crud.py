@@ -285,4 +285,3 @@ def test_get_ratings_with_comments_by_user():
     assert len(user_ratings) == 2
     assert any(rating.game_id == game1.game_id and rating.comment == "Enjoyed it." for rating in user_ratings)
     assert any(rating.game_id == game2.game_id and rating.comment == "Not my type." for rating in user_ratings)
-    db.close()
