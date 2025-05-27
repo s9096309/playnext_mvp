@@ -93,12 +93,12 @@ def test_read_user_by_id_not_found_authenticated(db_session: Session, client: Te
 
 def test_read_users_not_admin(db_session: Session, client: TestClient):
     db = db_session
-    # Create a non-admin user
     non_admin_user, non_admin_token = create_test_user(db, is_admin=False)
     headers = {"Authorization": f"Bearer {non_admin_token}"}
     response = client.get("/users/", headers=headers)
     assert response.status_code == status.HTTP_403_FORBIDDEN
-    assert response.json() == {"detail": "Not authorized to access this resource"}
+    # Update this line:
+    assert response.json() == {"detail": "Not authorized to read all users."}
 
 
 def test_read_users_admin(db_session: Session, client: TestClient):
