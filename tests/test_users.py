@@ -1,46 +1,35 @@
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from app.main import app  # Assuming your FastAPI app instance is in main.py
-from app.database import models, schemas
-from app.database.session import Base, get_db
-from app.utils.auth import create_access_token
-from datetime import timedelta, datetime
-from typing import Generator
-from fastapi import Depends
-from sqlalchemy import text  # Import the text function
+import pytest  # Import pytest for fixtures
+import uuid  # For generating unique parts of usernames/emails
 from fastapi import status
+from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session  # Import Session for type hinting
+from datetime import datetime, timedelta
+from app.main import app
+from app.database import models, schemas
+from app.utils.auth import create_access_token
 
-# Set up an in-memory SQLite database for testing
-DATABASE_URL = "sqlite:///:memory:"
-engine = create_engine(DATABASE_URL)
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Create the database tables
-Base.metadata.create_all(bind=engine)
+# Removed direct database setup imports (create_engine, sessionmaker, Base, get_db)
+# as they are handled by conftest.py
 
-def override_get_db():
-    db = TestingSessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+# --- Helper function for tests (using fixtures) ---
 
-app.dependency_overrides[get_db] = override_get_db
+# db_session and client fixtures are provided by tests/conftest.py
 
-client = TestClient(app)
-
-# Utility function to create a test user and get a token
-def create_test_user(db: TestingSessionLocal, is_admin: bool = False):
+def create_test_user(db: Session, is_admin: bool = False):
+    """Helper to create a user and return user object and access token."""
+    # Use UUID for unique username and email to prevent IntegrityError
+    username = f"testuser_{uuid.uuid4().hex[:8]}"
+    email = f"test_{uuid.uuid4().hex[:8]}@example.com"
     user_data = schemas.UserCreateDB(
-        username=f"testuser_{datetime.utcnow().timestamp()}",
-        email=f"test_{datetime.utcnow().timestamp()}@example.com",
-        password_hash="testpassword",
+        username=username,
+        email=email,
+        password_hash="testpassword",  # In a real app, this would be hashed
         registration_date=datetime.utcnow(),
         user_age=30,
         is_admin=is_admin
     )
-    db_user = models.User(**user_data.dict())
+    db_user = models.User(**user_data.model_dump())  # Use .model_dump() for Pydantic V2
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
@@ -48,12 +37,15 @@ def create_test_user(db: TestingSessionLocal, is_admin: bool = False):
     access_token = create_access_token(data={"sub": db_user.username}, expires_delta=access_token_expires)
     return db_user, access_token
 
-def test_create_user():
-    db = TestingSessionLocal()
+
+# --- Test Cases ---
+
+def test_create_user(db_session: Session, client: TestClient):
+    db = db_session  # Use the fixture-provided session
     user_data = {
         "username": "newtestuser",
         "email": "newtest@example.com",
-        "password": "password123",
+        "password": "password123",  # This will be hashed by your FastAPI endpoint
         "user_age": 28
     }
     response = client.post("/users/", json=user_data)
@@ -63,29 +55,34 @@ def test_create_user():
     assert content["email"] == "newtest@example.com"
     assert content["user_age"] == 28
     assert "user_id" in content
+
+    # Verify directly from the database
     db_user = db.query(models.User).filter(models.User.username == "newtestuser").first()
     assert db_user is not None
-    db.close()
+    assert db_user.email == "newtest@example.com"
 
-def test_create_user_duplicate_username():
-    db = TestingSessionLocal()
-    # Create a user first
-    user_data_1 = schemas.UserCreateDB(
-        username="duplicateuser",
-        email="dup1@example.com",
+
+def test_create_user_duplicate_username(db_session: Session, client: TestClient):
+    db = db_session
+    # Use the helper to create a user, ensuring unique base values
+    duplicate_username_base = f"duplicateuser_{uuid.uuid4().hex[:4]}"
+    user_data_1_schema = schemas.UserCreateDB(
+        username=duplicate_username_base,
+        email=f"{duplicate_username_base}_1@example.com",
         password_hash="hash1",
         registration_date=datetime.utcnow(),
         user_age=25,
         is_admin=False
     )
-    db_user_1 = models.User(**user_data_1.dict())
+    db_user_1 = models.User(**user_data_1_schema.model_dump())
     db.add(db_user_1)
     db.commit()
+    db.refresh(db_user_1)  # Refresh to get ID if needed, though not strictly here
 
-    # Try to create another user with the same username
+    # Try to create another user with the same username via API
     user_data_2 = {
-        "username": "duplicateuser",
-        "email": "dup2@example.com",
+        "username": duplicate_username_base,  # This username already exists
+        "email": f"{duplicate_username_base}_2@example.com",  # Unique email
         "password": "anotherpassword",
         "user_age": 30
     }
@@ -93,27 +90,29 @@ def test_create_user_duplicate_username():
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     content = response.json()
     assert content["detail"] == "Username already registered"
-    db.close()
 
-def test_create_user_duplicate_email():
-    db = TestingSessionLocal()
-    # Create a user first
-    user_data_1 = schemas.UserCreateDB(
-        username="uniqueuser",
-        email="same@example.com",
+
+def test_create_user_duplicate_email(db_session: Session, client: TestClient):
+    db = db_session
+    # Create a user first with a unique username but a specific email
+    duplicate_email_base = f"same_{uuid.uuid4().hex[:4]}@example.com"
+    user_data_1_schema = schemas.UserCreateDB(
+        username=f"uniqueuser_{uuid.uuid4().hex[:4]}",
+        email=duplicate_email_base,  # This email will be duplicated
         password_hash="hash1",
         registration_date=datetime.utcnow(),
         user_age=25,
         is_admin=False
     )
-    db_user_1 = models.User(**user_data_1.dict())
+    db_user_1 = models.User(**user_data_1_schema.model_dump())
     db.add(db_user_1)
     db.commit()
+    db.refresh(db_user_1)
 
-    # Try to create another user with the same email
+    # Try to create another user with the same email via API
     user_data_2 = {
-        "username": "anotheruser",
-        "email": "same@example.com",
+        "username": f"anotheruser_{uuid.uuid4().hex[:4]}",  # Unique username
+        "email": duplicate_email_base,  # Duplicate email
         "password": "anotherpassword",
         "user_age": 30
     }
@@ -121,10 +120,10 @@ def test_create_user_duplicate_email():
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     content = response.json()
     assert content["detail"] == "Email already registered"
-    db.close()
 
-def test_read_current_user_authenticated():
-    db = TestingSessionLocal()
+
+def test_read_current_user_authenticated(db_session: Session, client: TestClient):
+    db = db_session
     test_user, access_token = create_test_user(db)
     headers = {"Authorization": f"Bearer {access_token}"}
     response = client.get("/users/me", headers=headers)
@@ -133,10 +132,10 @@ def test_read_current_user_authenticated():
     assert content["username"] == test_user.username
     assert content["email"] == test_user.email
     assert content["user_id"] == test_user.user_id
-    db.close()
 
-def test_read_user_by_id_authenticated():
-    db = TestingSessionLocal()
+
+def test_read_user_by_id_authenticated(db_session: Session, client: TestClient):
+    db = db_session
     test_user, access_token = create_test_user(db)
     headers = {"Authorization": f"Bearer {access_token}"}
     response = client.get(f"/users/{test_user.user_id}", headers=headers)
@@ -145,31 +144,32 @@ def test_read_user_by_id_authenticated():
     assert content["username"] == test_user.username
     assert content["email"] == test_user.email
     assert content["user_id"] == test_user.user_id
-    db.close()
 
-def test_read_user_by_id_not_found_authenticated():
-    db = TestingSessionLocal()
+
+def test_read_user_by_id_not_found_authenticated(db_session: Session, client: TestClient):
+    db = db_session
     _, access_token = create_test_user(db)
     headers = {"Authorization": f"Bearer {access_token}"}
-    response = client.get("/users/9999", headers=headers)
+    response = client.get("/users/9999999999", headers=headers)  # Use a very large, unlikely ID
     assert response.status_code == status.HTTP_404_NOT_FOUND
     content = response.json()
     assert content["detail"] == "User not found"
-    db.close()
 
-def test_read_users_not_admin():
-    db = TestingSessionLocal()
+
+def test_read_users_not_admin(db_session: Session, client: TestClient):
+    db = db_session
+    # Create a non-admin user
     _, access_token = create_test_user(db, is_admin=False)
     headers = {"Authorization": f"Bearer {access_token}"}
     response = client.get("/users/", headers=headers)
     assert response.status_code == status.HTTP_403_FORBIDDEN
     content = response.json()
     assert content["detail"] == "Not authorized to read all users."
-    db.close()
 
-def test_read_users_admin():
-    db = TestingSessionLocal()
-    # Create two test users
+
+def test_read_users_admin(db_session: Session, client: TestClient):
+    db = db_session
+    # Create two test users, one of which is an admin
     admin_user, admin_token = create_test_user(db, is_admin=True)
     user1, _ = create_test_user(db, is_admin=False)
     user2, _ = create_test_user(db, is_admin=False)
@@ -178,14 +178,16 @@ def test_read_users_admin():
     response = client.get("/users/", headers=headers)
     assert response.status_code == status.HTTP_200_OK
     content = response.json()
-    assert len(content) >= 3  # Admin + 2 other users
+    # There should be at least 3 users (admin + 2 created)
+    assert len(content) >= 3
     assert any(user["user_id"] == admin_user.user_id for user in content)
     assert any(user["user_id"] == user1.user_id for user in content)
     assert any(user["user_id"] == user2.user_id for user in content)
-    db.close()
 
-def test_update_user_not_authorized():
-    db = TestingSessionLocal()
+
+def test_update_user_not_authorized(db_session: Session, client: TestClient):
+    db = db_session
+    # User1 tries to update User2
     user1, token1 = create_test_user(db)
     user2, _ = create_test_user(db)
     headers = {"Authorization": f"Bearer {token1}"}
@@ -194,10 +196,10 @@ def test_update_user_not_authorized():
     assert response.status_code == status.HTTP_403_FORBIDDEN
     content = response.json()
     assert content["detail"] == "Not authorized to update this user"
-    db.close()
 
-def test_update_user_authorized_self():
-    db = TestingSessionLocal()
+
+def test_update_user_authorized_self(db_session: Session, client: TestClient):
+    db = db_session
     test_user, access_token = create_test_user(db)
     headers = {"Authorization": f"Bearer {access_token}"}
     updated_data = {"username": "newusername", "user_age": 35}
@@ -207,7 +209,64 @@ def test_update_user_authorized_self():
     assert content["user_id"] == test_user.user_id
     assert content["username"] == "newusername"
     assert content["user_age"] == 35
+
+    # Verify the update in the database
     db_user = db.query(models.User).filter(models.User.user_id == test_user.user_id).first()
     assert db_user.username == "newusername"
     assert db_user.user_age == 35
-    db.close()
+
+
+def test_update_user_admin_authorized(db_session: Session, client: TestClient):
+    db = db_session
+    admin_user, admin_token = create_test_user(db, is_admin=True)
+    user_to_update, _ = create_test_user(db, is_admin=False)
+    headers = {"Authorization": f"Bearer {admin_token}"}
+    updated_data = {"username": "adminupdateduser", "email": "adminupdate@example.com"}
+    response = client.put(f"/users/{user_to_update.user_id}", headers=headers, json=updated_data)
+    assert response.status_code == status.HTTP_200_OK
+    content = response.json()
+    assert content["user_id"] == user_to_update.user_id
+    assert content["username"] == "adminupdateduser"
+    assert content["email"] == "adminupdate@example.com"
+
+    db_user = db.query(models.User).filter(models.User.user_id == user_to_update.user_id).first()
+    assert db_user.username == "adminupdateduser"
+    assert db_user.email == "adminupdate@example.com"
+
+
+def test_delete_user_not_authorized(db_session: Session, client: TestClient):
+    db = db_session
+    user1, token1 = create_test_user(db)
+    user2, _ = create_test_user(db)
+    headers = {"Authorization": f"Bearer {token1}"}
+    response = client.delete(f"/users/{user2.user_id}", headers=headers)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    content = response.json()
+    assert content["detail"] == "Not authorized to delete this user"
+
+
+def test_delete_user_authorized_self(db_session: Session, client: TestClient):
+    db = db_session
+    test_user, access_token = create_test_user(db)
+    headers = {"Authorization": f"Bearer {access_token}"}
+    response = client.delete(f"/users/{test_user.user_id}", headers=headers)
+    assert response.status_code == status.HTTP_200_OK
+    content = response.json()
+    assert content["message"] == "User deleted successfully"
+
+    db_user = db.query(models.User).filter(models.User.user_id == test_user.user_id).first()
+    assert db_user is None
+
+
+def test_delete_user_admin_authorized(db_session: Session, client: TestClient):
+    db = db_session
+    admin_user, admin_token = create_test_user(db, is_admin=True)
+    user_to_delete, _ = create_test_user(db, is_admin=False)
+    headers = {"Authorization": f"Bearer {admin_token}"}
+    response = client.delete(f"/users/{user_to_delete.user_id}", headers=headers)
+    assert response.status_code == status.HTTP_200_OK
+    content = response.json()
+    assert content["message"] == "User deleted successfully"
+
+    db_user = db.query(models.User).filter(models.User.user_id == user_to_delete.user_id).first()
+    assert db_user is None

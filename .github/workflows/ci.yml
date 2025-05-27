@@ -44,6 +44,7 @@ jobs:
         # Ensure pytest, pytest-cov, coverage, pylint, and alembic are in your requirements.txt
         # If not, add them to requirements.txt, or install them explicitly here:
         # pip install pytest pytest-cov coverage pylint alembic
+        # Removed the 'pip install -e .' line as it's not needed with PYTHONPATH
 
     - name: Set up environment variables for PostgreSQL and Secrets
       run: |
@@ -53,8 +54,11 @@ jobs:
         # Use printf %s to avoid issues with potential newlines or special chars in secrets
         printf "SECRET_KEY=%s\n" "${{ secrets.JWT_SECRET_KEY }}" >> $GITHUB_ENV
         printf "GEMINI_API_KEY=%s\n" "${{ secrets.GEMINI_API_KEY }}" >> $GITHUB_ENV
+        # --- REVISED IGDB SECRET HANDLING ---
         printf "IGDB_CLIENT_ID=%s\n" "${{ secrets.IGDB_CLIENT_ID }}" >> $GITHUB_ENV
-        printf "IGDB_APP_ACCESS_TOKEN=%s\n" "${{ secrets.IGDB_APP_ACCESS_TOKEN }}" >> $GITHUB_ENV
+        printf "IGDB_CLIENT_SECRET=%s\n" "${{ secrets.IGDB_CLIENT_SECRET }}" >> $GITHUB_ENV
+        # Removed: printf "IGDB_APP_ACCESS_TOKEN=%s\n" "${{ secrets.IGDB_APP_ACCESS_TOKEN }}" >> $GITHUB_ENV
+        # ------------------------------------
 
     - name: Wait for PostgreSQL to be ready
       # Use psql to actively wait for the database to be up and accepting connections
@@ -71,7 +75,6 @@ jobs:
         # Fail the workflow if PostgreSQL is not ready after attempts
         PGPASSWORD=test_password psql -h localhost -U test_user -d test_db -c '\q' || (echo "PostgreSQL did not become ready." && exit 1)
 
-
     - name: Run Alembic Migrations
       # Apply your database migrations to the test database schema
       run: |
@@ -82,7 +85,6 @@ jobs:
       env:
         PYTHONPATH: . # This tells Python to look for modules in the current directory (project root)
       run: |
-        
         pytest tests/ --cov=app --cov-report=xml --cov-report=term-missing
         # --cov=app: Collects coverage for code within the 'app' directory
         # --cov-report=xml: Generates a coverage.xml file (useful for tools like Codecov)

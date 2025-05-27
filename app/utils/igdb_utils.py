@@ -3,23 +3,25 @@ from igdb.wrapper import IGDBWrapper
 import json
 
 CLIENT_ID = os.getenv("IGDB_CLIENT_ID")
-APP_ACCESS_TOKEN = os.getenv("IGDB_APP_ACCESS_TOKEN")
+CLIENT_SECRET = os.getenv("IGDB_CLIENT_SECRET") # Changed from APP_ACCESS_TOKEN
 
 print(f"IGDB_CLIENT_ID: {CLIENT_ID}")
-print(f"IGDB_APP_ACCESS_TOKEN: {APP_ACCESS_TOKEN}")
+# Masking the secret for safety, even in local debugging output
+print(f"IGDB_CLIENT_SECRET: {'*' * len(CLIENT_SECRET) if CLIENT_SECRET else 'None'}")
 
-if not CLIENT_ID or not APP_ACCESS_TOKEN:
-    raise ValueError("IGDB_CLIENT_ID or IGDB_APP_ACCESS_TOKEN not found in environment variables.")
+if not CLIENT_ID or not CLIENT_SECRET: # Changed condition
+    raise ValueError("IGDB_CLIENT_ID or IGDB_CLIENT_SECRET not found in environment variables.") # Changed error message
 
-wrapper = IGDBWrapper(CLIENT_ID, APP_ACCESS_TOKEN)
+# The IGDBWrapper will now use your CLIENT_SECRET to internally get the APP_ACCESS_TOKEN.
+wrapper = IGDBWrapper(CLIENT_ID, CLIENT_SECRET) # Changed second argument
 
 def search_games_igdb(query):
     try:
         byte_array = wrapper.api_request(
             "games",
-            f'search "{query}"; fields name, cover.url, genres.name, platforms.name, id, age_ratings.rating, release_dates.human; limit 10;' # added release_dates.human
+            f'search "{query}"; fields name, cover.url, genres.name, platforms.name, id, age_ratings.rating, release_dates.human; limit 10;'
         )
-        import json
+        # import json # This line is redundant if json is imported at the top
         result = json.loads(byte_array)
         print("IGDB API Response:", result) # Add this line for debugging
         return result
@@ -33,15 +35,13 @@ def get_game_by_id_igdb(game_id):
             "games",
             f'fields name, cover.url, genres.name, platforms.name, id, age_ratings.rating, release_dates.human; where id = {game_id};'
         )
-        import json
+        # import json # This line is redundant if json is imported at the top
         result = json.loads(byte_array)
         print("IGDB API Response (get_game_by_id): ", result)
         return result
     except Exception as e:
         print(f"Error getting game from IGDB: {e}")
         return None
-
-
 
 def get_cover_url(cover_id):
     """
