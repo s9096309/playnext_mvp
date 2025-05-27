@@ -19,15 +19,15 @@ def get_user_by_email(db: Session, email: str):
     """Retrieves a user by their email address."""
     return db.query(models.User).filter(models.User.email == email).first()
 
-def create_user(db: Session, user: schemas.UserCreateDB, is_admin: bool = False):
+def create_user(db: Session, user: schemas.UserCreateDB):
     """Creates a new user in the database."""
     db_user = models.User(
         username=user.username,
         email=user.email,
         password_hash=user.password_hash,
         user_age=user.user_age,
-        is_admin=is_admin,
-        registration_date=datetime.now(UTC) # Use datetime.now(UTC) to fix DeprecationWarning
+        is_admin=user.is_admin, # Use the is_admin from the user object
+        registration_date=user.registration_date # Use the registration_date from the user object
     )
     db.add(db_user)
     db.commit()

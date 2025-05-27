@@ -44,13 +44,16 @@ class UserCreateDB(UserBase):
     registration_date: datetime
     is_admin: bool
 
-class UserUpdate(UserBase):
+class UserUpdate(BaseModel):
+    username: Optional[str] = None
+    email: Optional[str] = None
     password: Optional[str] = None
-    # is_admin: Optional[bool] = None  <- Removed from the update schema
+    user_age: Optional[int] = None
+    is_admin: Optional[bool] = None
 
 class User(UserBase):
     user_id: int
-    password_hash: str  # Important to include this in the User (response) schema
+    password_hash: str
     registration_date: datetime
     is_admin: bool
 

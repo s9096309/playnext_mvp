@@ -4,8 +4,8 @@ from app.database import models, schemas
 from app.database.session import get_db
 from app.database import user_crud # This is correct, all user CRUD here
 from app.routers import recommendations # Assuming this is for other non-user-specific recommendations
-from app.utils.auth import get_current_user
-
+from app.utils.auth import get_current_user, get_password_hash
+from datetime import datetime, UTC
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -17,8 +17,19 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db_user = user_crud.get_user_by_email(db, email=user.email)
     if db_user:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
-    return user_crud.create_user(db=db, user=schemas.UserCreateDB(**user.model_dump()))
 
+    # This is the crucial part that was likely missed or reverted
+    hashed_password = get_password_hash(user.password)
+
+    user_create_db = schemas.UserCreateDB(
+        username=user.username,
+        email=user.email,
+        password_hash=hashed_password,
+        registration_date=datetime.now(UTC),
+        user_age=user.user_age,
+        is_admin=False # Default to False for new registrations via this endpoint
+    )
+    return user_crud.create_user(db=db, user=user_create_db)
 @router.get("/me", response_model=schemas.User)
 def read_current_user(current_user: models.User = Depends(get_current_user)):
     return current_user
