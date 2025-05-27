@@ -3,101 +3,47 @@ name: CI/CD Pipeline
 on:
   push:
     branches:
-      - main  # Set this to 'main' or 'master' depending on your main branch name
+      - main
   pull_request:
     branches:
-      - main  # Set this to 'main' or 'master' depending on your main branch name
+      - main
 
 jobs:
   build-and-test:
-    runs-on: ubuntu-latest # The virtual environment where the job will run
-
-    services:
-      # Define a PostgreSQL service that will run alongside your job
-      postgres:
-        image: postgres:15 # Use a specific PostgreSQL version. Try to match your local development version.
-        env:
-          POSTGRES_DB: test_db       # Name of the database for tests
-          POSTGRES_USER: test_user   # User for the test database
-          POSTGRES_PASSWORD: test_password # Password for the test database
-        ports:
-          - 5432:5432 # Map port 5432 on the host (job's accessible port) to 5432 in the container
-        options: >- # Health check options to ensure the DB is ready
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+    runs-on: ubuntu-latest
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4 # Action to check out your repository code
+      uses: actions/checkout@v4
 
     - name: Set up Python
-      uses: actions/setup-python@v5 # Action to set up Python environment
+      uses: actions/setup-python@v5
       with:
-        python-version: '3.12' # Specify the Python version for your project
+        python-version: '3.12'
 
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        # Ensure pytest, pytest-cov, coverage, pylint, and alembic are in your requirements.txt
-        # If not, add them to requirements.txt, or install them explicitly here:
-        # pip install pytest pytest-cov coverage pylint alembic
-        # Removed the 'pip install -e .' line as it's not needed with PYTHONPATH
 
-    - name: Set up environment variables for PostgreSQL and Secrets
+    - name: Set up environment variables for Secrets
       run: |
-        # Set the DATABASE_URL to connect to the PostgreSQL service
-        echo "DATABASE_URL=postgresql://test_user:test_password@localhost:5432/test_db" >> $GITHUB_ENV
-        
-        # Use printf %s to avoid issues with potential newlines or special chars in secrets
         printf "SECRET_KEY=%s\n" "${{ secrets.JWT_SECRET_KEY }}" >> $GITHUB_ENV
         printf "GEMINI_API_KEY=%s\n" "${{ secrets.GEMINI_API_KEY }}" >> $GITHUB_ENV
-        # --- REVISED IGDB SECRET HANDLING ---
         printf "IGDB_CLIENT_ID=%s\n" "${{ secrets.IGDB_CLIENT_ID }}" >> $GITHUB_ENV
         printf "IGDB_CLIENT_SECRET=%s\n" "${{ secrets.IGDB_CLIENT_SECRET }}" >> $GITHUB_ENV
-        # Removed: printf "IGDB_APP_ACCESS_TOKEN=%s\n" "${{ secrets.IGDB_APP_ACCESS_TOKEN }}" >> $GITHUB_ENV
-        # ------------------------------------
-
-    - name: Wait for PostgreSQL to be ready
-      # Use psql to actively wait for the database to be up and accepting connections
-      run: |
-        echo "Attempting to connect to PostgreSQL..."
-        for i in $(seq 1 10); do
-          if PGPASSWORD=test_password psql -h localhost -U test_user -d test_db -c '\q'; then
-            echo "PostgreSQL is ready after $i attempts."
-            break
-          fi
-          echo "Waiting for PostgreSQL... ($i/10)"
-          sleep 5
-        done
-        # Fail the workflow if PostgreSQL is not ready after attempts
-        PGPASSWORD=test_password psql -h localhost -U test_user -d test_db -c '\q' || (echo "PostgreSQL did not become ready." && exit 1)
-
-    - name: Run Alembic Migrations
-      # Apply your database migrations to the test database schema
-      run: |
-        alembic upgrade head
 
     - name: Run Tests with Coverage
-      # Execute your pytest tests and collect code coverage data
       env:
-        PYTHONPATH: . # This tells Python to look for modules in the current directory (project root)
+        PYTHONPATH: .
       run: |
         pytest tests/ --cov=app --cov-report=xml --cov-report=term-missing
-        # --cov=app: Collects coverage for code within the 'app' directory
-        # --cov-report=xml: Generates a coverage.xml file (useful for tools like Codecov)
-        # --cov-report=term-missing: Shows uncovered lines directly in the terminal output
 
     - name: Run Pylint
-      # Run Pylint for static code analysis and quality checks
       run: pylint app/
-      # Adjust this command or add a config file (.pylintrc) to customize Pylint's behavior
 
-    # Optional: Upload coverage report artifact
     - name: Upload coverage report
-      uses: actions/upload-artifact@v4 # Action to upload artifacts (files)
+      uses: actions/upload-artifact@v4
       with:
         name: coverage-report
-        path: coverage.xml # Path to the generated coverage XML file
+        path: coverage.xml
