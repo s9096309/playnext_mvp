@@ -28,6 +28,10 @@ jobs:
 
     - name: Set up environment variables for Secrets
       run: |
+        # Provide a dummy DATABASE_URL for the app to initialize,
+        # as tests will override the actual connection with SQLite.
+        echo "DATABASE_URL=postgresql://user:password@localhost:5432/dummy_db" >> $GITHUB_ENV
+
         printf "SECRET_KEY=%s\n" "${{ secrets.JWT_SECRET_KEY }}" >> $GITHUB_ENV
         printf "GEMINI_API_KEY=%s\n" "${{ secrets.GEMINI_API_KEY }}" >> $GITHUB_ENV
         printf "IGDB_CLIENT_ID=%s\n" "${{ secrets.IGDB_CLIENT_ID }}" >> $GITHUB_ENV
