@@ -5,6 +5,7 @@ from app.database.models import Base # Adjust this import path if needed
 from app.main import app
 from app.database.session import get_db # Your dependency for database session
 from fastapi.testclient import TestClient
+from datetime import datetime, UTC # Add UTC import for consistency
 
 # Use an in-memory SQLite database for testing
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
