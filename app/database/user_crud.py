@@ -38,16 +38,26 @@ def get_users(db: Session, skip: int = 0, limit: int = 100):
     """Retrieves a list of all users."""
     return db.query(models.User).offset(skip).limit(limit).all()
 
-def update_user(db: Session, user_id: int, user_update: schemas.UserUpdate):
-    """Updates an existing user's profile information."""
+from app.utils.auth import get_password_hash # You'll need this for password updates
+
+def update_user(db: Session, user_id: int, user_update: schemas.UserUpdate) -> models.User:
     db_user = db.query(models.User).filter(models.User.user_id == user_id).first()
-    if db_user:
-        update_data = user_update.model_dump(exclude_unset=True) # For Pydantic V2
-        for key, value in update_data.items():
+    if not db_user:
+        return None
+
+    # Get a dictionary of fields from the update schema,
+    # but only include those that were explicitly set in the request.
+    update_data = user_update.model_dump(exclude_unset=True) # <-- Crucial line!
+
+    for key, value in update_data.items():
+        if key == "password": # Handle password hashing if 'password' is in UserUpdate
+            setattr(db_user, "password_hash", get_password_hash(value))
+        else:
             setattr(db_user, key, value)
-        db.add(db_user) # or db.merge(db_user) depending on SQLAlchemy version/setup
-        db.commit()
-        db.refresh(db_user)
+
+    db.add(db_user) # Mark as dirty for update, usually tracked already
+    db.commit()
+    db.refresh(db_user) # Refresh to get latest state from DB
     return db_user
 
 def delete_user(db: Session, user_id: int):
