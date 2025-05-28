@@ -6,11 +6,13 @@ SQLAlchemy models for the PlayNext database.
 This module defines the database schema for users, games, ratings,
 backlog items, and recommendations using SQLAlchemy's declarative base.
 """
+from app.database.schemas import BacklogStatus
 import datetime
 import enum
 from sqlalchemy import Column, Integer, String, Float, DateTime, Date, Enum, ForeignKey, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
+
 
 Base = declarative_base()
 
@@ -51,12 +53,6 @@ class Game(Base):
     ratings = relationship("Rating", back_populates="game")
 
 
-class BacklogStatus(enum.Enum):
-    """Enum for the possible statuses of a game in a user's backlog."""
-    PLAYING = "playing"
-    COMPLETED = "completed"
-    DROPPED = "dropped"
-
 
 class BacklogItem(Base):
     """SQLAlchemy model for the 'backlog_items' table."""
@@ -65,11 +61,9 @@ class BacklogItem(Base):
     backlog_id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.user_id"))
     game_id = Column(Integer, ForeignKey("games.game_id"))
-    # The 'status' column now explicitly tells SQLAlchemy to use the enum's
-    # assigned values (e.g., "playing") for database interaction.
     status = Column(Enum(BacklogStatus, values_callable=lambda obj: [e.value for e in obj], native_enum=False))
-    rating = Column(Float, nullable=True) # Set to be nullable, matching your schema
-    added_date = Column(DateTime, default=datetime.datetime.utcnow) # Automatically set creation timestamp
+    rating = Column(Float, nullable=True)
+    added_date = Column(DateTime, default=datetime.datetime.utcnow)
 
     user = relationship("User", back_populates="backlog_items")
     game = relationship("Game", back_populates="backlog_items")
