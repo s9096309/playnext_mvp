@@ -29,9 +29,9 @@ jobs:
 
     - name: Set up environment variables for Secrets
       run: |
-        # Provide a dummy DATABASE_URL for the app to initialize,
-        # as tests will override the actual connection with SQLite.
-        echo "DATABASE_URL=postgresql://user:password@localhost:5432/dummy_db" >> $GITHUB_ENV
+        # IMPORTANT: For CI tests, explicitly set DATABASE_URL to in-memory SQLite
+        # This ensures the 'engine' in session.py initializes correctly during lifespan.
+        echo "DATABASE_URL=sqlite:///:memory:" >> $GITHUB_ENV
 
         printf "SECRET_KEY=%s\n" "${{ secrets.JWT_SECRET_KEY }}" >> $GITHUB_ENV
         printf "GEMINI_API_KEY=%s\n" "${{ secrets.GEMINI_API_KEY }}" >> $GITHUB_ENV
