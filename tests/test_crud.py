@@ -253,56 +253,55 @@ def test_create_backlog_item(db_session: Session):
     backlog_item_data = schemas.BacklogItemCreate(
         user_id=user.user_id,
         game_id=game.game_id,
-        status=schemas.BacklogStatus.PLAYING.value # Use .value here
+        status=schemas.BacklogStatus.PLAYING # Pass the enum member directly
     )
     db_backlog_item = crud.create_backlog_item(db=db, backlog_item=backlog_item_data)
     assert db_backlog_item.backlog_id is not None
     assert db_backlog_item.user_id == user.user_id
     assert db_backlog_item.game_id == game.game_id
-    assert db_backlog_item.status.value == schemas.BacklogStatus.PLAYING.value
+    assert db_backlog_item.status == schemas.BacklogStatus.PLAYING # Assert with the enum member
 
 def test_get_backlog_item(db_session: Session):
     db = db_session
     user, _ = create_test_user(db, username="get_backlog_user", email="get_backlog@example.com")
     game = create_test_game(db, game_name="Get Backlog Game")
-    backlog_item_data = schemas.BacklogItemCreate(user_id=user.user_id, game_id=game.game_id, status=schemas.BacklogStatus.COMPLETED.value) # Use .value here
+    backlog_item_data = schemas.BacklogItemCreate(user_id=user.user_id, game_id=game.game_id, status=schemas.BacklogStatus.COMPLETED) # Pass the enum member directly
     db_backlog_item = crud.create_backlog_item(db=db, backlog_item=backlog_item_data)
     retrieved_item = crud.get_backlog_item(db, backlog_id=db_backlog_item.backlog_id)
     assert retrieved_item is not None
     assert retrieved_item.user_id == user.user_id
-    assert retrieved_item.status.value == schemas.BacklogStatus.COMPLETED.value # Also assert with .value
+    assert retrieved_item.status == schemas.BacklogStatus.COMPLETED # Assert with the enum member
 
 def test_get_user_backlog(db_session: Session):
     db = db_session
     user, _ = create_test_user(db, username="user_for_backlog", email="user_for_backlog@example.com")
     game1 = create_test_game(db, game_name="User Backlog Game 1")
     game2 = create_test_game(db, game_name="User Backlog Game 2")
-    crud.create_backlog_item(db=db, backlog_item=schemas.BacklogItemCreate(user_id=user.user_id, game_id=game1.game_id, status=schemas.BacklogStatus.PLAYING.value)) # Use .value
-    crud.create_backlog_item(db=db, backlog_item=schemas.BacklogItemCreate(user_id=user.user_id, game_id=game2.game_id, status=schemas.BacklogStatus.DROPPED.value)) # Use .value
+    crud.create_backlog_item(db=db, backlog_item=schemas.BacklogItemCreate(user_id=user.user_id, game_id=game1.game_id, status=schemas.BacklogStatus.PLAYING)) # Pass the enum member
+    crud.create_backlog_item(db=db, backlog_item=schemas.BacklogItemCreate(user_id=user.user_id, game_id=game2.game_id, status=schemas.BacklogStatus.DROPPED)) # Pass the enum member
     backlog_items = user_crud.get_user_backlog(db, user_id=user.user_id)
     assert len(backlog_items) == 2
     assert all(item.user_id == user.user_id for item in backlog_items)
-    # You might want to add assertions for the status values as well
-    assert any(item.status.value == schemas.BacklogStatus.PLAYING.value for item in backlog_items)
-    assert any(item.status.value == schemas.BacklogStatus.DROPPED.value for item in backlog_items)
+    assert any(item.status == schemas.BacklogStatus.PLAYING for item in backlog_items)
+    assert any(item.status == schemas.BacklogStatus.DROPPED for item in backlog_items)
 
 
 def test_update_backlog_item(db_session: Session):
     db = db_session
     user, _ = create_test_user(db, username="update_backlog_user", email="update_backlog@example.com")
     game = create_test_game(db, game_name="Update Backlog Game")
-    backlog_item_data = schemas.BacklogItemCreate(user_id=user.user_id, game_id=game.game_id, status=schemas.BacklogStatus.PLAYING.value) # Use .value
+    backlog_item_data = schemas.BacklogItemCreate(user_id=user.user_id, game_id=game.game_id, status=schemas.BacklogStatus.PLAYING) # Pass the enum member
     db_backlog_item = crud.create_backlog_item(db=db, backlog_item=backlog_item_data)
-    update_data = schemas.BacklogItemUpdate(status=schemas.BacklogStatus.COMPLETED.value, rating=4.0) # Use .value
+    update_data = schemas.BacklogItemUpdate(status=schemas.BacklogStatus.COMPLETED, rating=4.0) # Pass the enum member
     updated_item = crud.update_backlog_item(db=db, backlog_id=db_backlog_item.backlog_id, backlog_item_update=update_data)
-    assert updated_item.status.value == schemas.BacklogStatus.COMPLETED.value
+    assert updated_item.status == schemas.BacklogStatus.COMPLETED
     assert updated_item.rating == 4.0
 
 def test_delete_backlog_item(db_session: Session):
     db = db_session
     user, _ = create_test_user(db, username="user_delete_backlog", email="delete_backlog@example.com")
     game = create_test_game(db, game_name="Game to Delete from Backlog")
-    backlog_item_data = schemas.BacklogItemCreate(user_id=user.user_id, game_id=game.game_id, status=schemas.BacklogStatus.PLAYING.value) # Use .value
+    backlog_item_data = schemas.BacklogItemCreate(user_id=user.user_id, game_id=game.game_id, status=schemas.BacklogStatus.PLAYING) # Pass the enum member
     db_backlog_item = crud.create_backlog_item(db=db, backlog_item=backlog_item_data)
     deleted_item = crud.delete_backlog_item(db, backlog_id=db_backlog_item.backlog_id)
     assert deleted_item is not None
@@ -385,7 +384,7 @@ def test_get_user_recommendations(db_session: Session):
 
     # Add a backlog item for the user
     crud.create_backlog_item(db=db, backlog_item=schemas.BacklogItemCreate(
-        user_id=user.user_id, game_id=game2.game_id, status=schemas.BacklogStatus.PLAYING.value # Use .value here
+        user_id=user.user_id, game_id=game2.game_id, status=schemas.BacklogStatus.PLAYING # Pass the enum member directly
     ))
 
     # Get recommendations (this will now call user_crud.get_user_recommendations)
