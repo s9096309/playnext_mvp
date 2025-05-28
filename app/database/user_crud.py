@@ -1,10 +1,9 @@
 # app/database/user_crud.py
 
 from typing import List, Optional
-from datetime import datetime
-
+from datetime import datetime, timezone # Added timezone import
 from sqlalchemy.orm import Session
-from sqlalchemy import desc, asc
+from sqlalchemy import desc, asc # Keep these if used elsewhere for ordering, otherwise they can be removed
 
 from app.utils.auth import get_password_hash
 from . import models, schemas
@@ -23,13 +22,25 @@ def get_user_by_email(db: Session, email: str) -> Optional[models.User]:
 
 
 def create_user(db: Session, user: schemas.UserCreateDB) -> models.User:
+    """
+    Creates a new user in the database.
+
+    Args:
+        db (Session): The database session.
+        user (schemas.UserCreateDB): The Pydantic schema containing user data
+                                      including the hashed password and registration date.
+
+    Returns:
+        models.User: The newly created SQLAlchemy User model instance.
+    """
     db_user = models.User(
         username=user.username,
         email=user.email,
         password_hash=user.password_hash,
         user_age=user.user_age,
         is_admin=user.is_admin,
-        registration_date=user.registration_date
+        registration_date=user.registration_date,
+        igdb_id=user.igdb_id # Ensure igdb_id is passed if it's in your models.User and schemas.UserCreateDB
     )
     db.add(db_user)
     db.commit()
@@ -46,10 +57,10 @@ def update_user(db: Session, user_id: int, user_update: schemas.UserUpdate) -> O
     if not db_user:
         return None
 
-    update_data = user_update.model_dump(exclude_unset=True)
+    update_data = user_update.model_dump(exclude_unset=True) # Using model_dump for Pydantic v2
 
     for key, value in update_data.items():
-        if key == "password":
+        if key == "password": # Handle password hashing for updates
             setattr(db_user, "password_hash", get_password_hash(value))
         else:
             setattr(db_user, key, value)
@@ -69,14 +80,30 @@ def delete_user(db: Session, user_id: int) -> Optional[models.User]:
 
 
 def get_user_backlog(db: Session, user_id: int) -> List[models.BacklogItem]:
+    """Retrieve all backlog items for a specific user."""
     return db.query(models.BacklogItem).filter(models.BacklogItem.user_id == user_id).all()
 
 
 def get_ratings_by_user(db: Session, user_id: int) -> List[models.Rating]:
+    """Retrieve all ratings by a specific user."""
     return db.query(models.Rating).filter(models.Rating.user_id == user_id).all()
 
 
 def get_user_recommendations(db: Session, user_id: int, limit: int = 10) -> List[models.Game]:
+    """
+    Generates game recommendations for a user based on their ratings and backlog.
+
+    This is a simplified in-DB recommendation logic. For more complex scenarios,
+    a dedicated recommendation engine or service might be used.
+
+    Args:
+        db (Session): The database session.
+        user_id (int): The ID of the user for whom to generate recommendations.
+        limit (int): The maximum number of recommendations to return.
+
+    Returns:
+        List[models.Game]: A list of recommended game model instances.
+    """
     user_ratings = db.query(models.Rating).filter(models.Rating.user_id == user_id).order_by(
         desc(models.Rating.rating)).limit(5).all()
     user_backlog = db.query(models.BacklogItem).filter(models.BacklogItem.user_id == user_id).all()
@@ -101,3 +128,7 @@ def get_user_recommendations(db: Session, user_id: int, limit: int = 10) -> List
                         return list(recommended_games_set)[:limit]
 
     return list(recommended_games_set)[:limit]
+
+# You might have other CRUD functions for Game, Rating, BacklogItem here.
+# For simplicity, I'm only showing the user-related ones and the specific
+# recommendation function that was in your provided user_crud.py.

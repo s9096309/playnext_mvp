@@ -16,7 +16,8 @@ from sqlalchemy.orm import Session
 from app.database import models, schemas
 from app.database.session import get_db
 from app.database import user_crud
-from app.utils.auth import get_current_user, get_password_hash
+from app.utils.auth import get_current_user
+from app.utils.security import hash_password # Corrected import: Use hash_password
 
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -53,15 +54,17 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
             detail="Email already registered"
         )
 
-    hashed_password = get_password_hash(user.password)
+    # Use the correct function name: hash_password
+    hashed_password = hash_password(user.password)
 
     user_create_db = schemas.UserCreateDB(
         username=user.username,
         email=user.email,
         password_hash=hashed_password,
-        registration_date=datetime.datetime.now(datetime.UTC), # Use datetime.UTC
+        registration_date=datetime.datetime.now(datetime.UTC),
         user_age=user.user_age,
-        is_admin=False
+        is_admin=user.is_admin, # Keep this from UserCreate or explicitly set it
+        igdb_id=user.igdb_id # Pass igdb_id from UserCreate
     )
     return user_crud.create_user(db=db, user=user_create_db)
 
@@ -150,7 +153,7 @@ def read_users(
 @router.put("/{user_id}", response_model=schemas.User)
 def update_user(
     user_id: int,
-    user: schemas.UserUpdate,
+    user_update: schemas.UserUpdate, # Renamed parameter for clarity
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -161,7 +164,7 @@ def update_user(
 
     Args:
         user_id (int): The ID of the user to update.
-        user (schemas.UserUpdate): The user data for the update.
+        user_update (schemas.UserUpdate): The user data for the update.
         current_user (models.User): The currently authenticated user.
         db (Session): The database session.
 
@@ -177,7 +180,7 @@ def update_user(
             detail="Not authorized to update this user"
         )
 
-    db_user = user_crud.update_user(db, user_id=user_id, user_update=user)
+    db_user = user_crud.update_user(db, user_id=user_id, user_update=user_update)
     if db_user is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -300,7 +303,7 @@ def read_users_me_ratings(
     return ratings
 
 
-@router.get("/me/recommendations", response_model=schemas.RecommendationResponse)
+@router.get("/me/recommendations", response_model=List[schemas.Game]) # Changed response_model to List[schemas.Game]
 async def read_users_me_recommendations(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -313,11 +316,7 @@ async def read_users_me_recommendations(
         db (Session): The database session.
 
     Returns:
-        schemas.RecommendationResponse: An object containing recommendations for the user.
+        List[schemas.Game]: A list of recommended game objects for the user.
     """
-    # Assuming UserRequest schema is correctly defined and used.
-    # Note: user_request.user_id is redundant if current_user.user_id is available.
-    # Consider passing current_user.user_id directly to get_user_recommendations.
-    # The schemas.RecommendationResponse indicates this function might need to
-    # wrap the list of recommendations in a specific Pydantic model.
+    # Directly call user_crud.get_user_recommendations as it exists in user_crud.py
     return user_crud.get_user_recommendations(db=db, user_id=current_user.user_id)
