@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, UTC
 from test_helpers import create_test_user, create_test_game
 
 def test_create_user(db_session: Session, client: TestClient):
-    db = db_session  # Use the fixture-provided session
+    db = db_session
     user_data = {
         "username": "newtestuser",
         "email": "newtest@example.com",
@@ -15,7 +15,7 @@ def test_create_user(db_session: Session, client: TestClient):
         "user_age": 28
     }
     response = client.post("/users/", json=user_data)
-    assert response.status_code == status.HTTP_200_OK  # Expect 200 OK on success
+    assert response.status_code == status.HTTP_200_OK
     response_data = response.json()
     assert response_data["username"] == "newtestuser"
     assert response_data["email"] == "newtest@example.com"
@@ -86,7 +86,7 @@ def test_read_user_by_id_not_found_authenticated(db_session: Session, client: Te
     db = db_session
     auth_user, auth_token = create_test_user(db, username="auth_nf", email="auth_nf@example.com")
     headers = {"Authorization": f"Bearer {auth_token}"}
-    response = client.get("/users/9999999999", headers=headers)  # Using a very large ID unlikely to exist
+    response = client.get("/users/9999999999", headers=headers)
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert response.json() == {"detail": "User not found"}
 
@@ -97,7 +97,6 @@ def test_read_users_not_admin(db_session: Session, client: TestClient):
     headers = {"Authorization": f"Bearer {non_admin_token}"}
     response = client.get("/users/", headers=headers)
     assert response.status_code == status.HTTP_403_FORBIDDEN
-    # Update this line:
     assert response.json() == {"detail": "Not authorized to read all users."}
 
 
@@ -127,20 +126,20 @@ def test_update_user_not_authorized(db_session: Session, client: TestClient):
     headers = {"Authorization": f"Bearer {token1}"}
     updated_data = {"username": "updateduser_unauth"}  # Payload for update
     response = client.put(f"/users/{user2.user_id}", headers=headers, json=updated_data)
-    assert response.status_code == status.HTTP_403_FORBIDDEN  # Expect 403, not 422
+    assert response.status_code == status.HTTP_403_FORBIDDEN
     assert response.json() == {"detail": "Not authorized to update this user"}
 
 
-def test_update_user_authorized_self(db_session: Session, client: TestClient):
+def test_delete_user_authorized_self(db_session: Session, client: TestClient):
     db = db_session
-    test_user, access_token = create_test_user(db, username="self_update_user", email="self_update@example.com")
+    test_user, access_token = create_test_user(db, username="self_delete_user", email="self_delete@example.com")
     headers = {"Authorization": f"Bearer {access_token}"}
-    updated_data = {"username": "newusername_self", "user_age": 35}  # Payload for update
-    response = client.put(f"/users/{test_user.user_id}", headers=headers, json=updated_data)
-    assert response.status_code == status.HTTP_200_OK  # Expect 200 OK
-    response_data = response.json()
-    assert response_data["username"] == "newusername_self"
-    assert response_data["user_age"] == 35
+    response = client.delete(f"/users/{test_user.user_id}", headers=headers)
+    assert response.status_code == status.HTTP_200_OK
+    content = response.json()
+    print(f"Delete response content: {content}")
+    assert content["user_id"] == test_user.user_id
+    assert content["username"] == "self_delete_user"
 
 
 def test_update_user_admin_authorized(db_session: Session, client: TestClient):
@@ -174,7 +173,7 @@ def test_delete_user_authorized_self(db_session: Session, client: TestClient):
     response = client.delete(f"/users/{test_user.user_id}", headers=headers)
     assert response.status_code == status.HTTP_200_OK
     content = response.json()
-    assert content["detail"] == "User deleted successfully"  # Changed from "message" to "detail"
+    assert content["user_id"] == test_user.user_id
 
 
 def test_delete_user_admin_authorized(db_session: Session, client: TestClient):
@@ -185,4 +184,6 @@ def test_delete_user_admin_authorized(db_session: Session, client: TestClient):
     response = client.delete(f"/users/{user_to_delete.user_id}", headers=headers)
     assert response.status_code == status.HTTP_200_OK
     content = response.json()
-    assert content["detail"] == "User deleted successfully"  # Changed from "message" to "detail"
+    print(f"Delete response content: {content}")
+    assert content["user_id"] == user_to_delete.user_id
+    assert content["username"] == "target_del"

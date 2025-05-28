@@ -2,20 +2,12 @@
 import pytest
 from sqlalchemy.orm import Session
 from datetime import datetime, date, UTC
-import uuid # For generating unique igdb_id
+import uuid
 
 from app.database import crud
 from app.database import user_crud
 from app.database import schemas
-from tests.test_helpers import create_test_user, create_test_game # Import helper functions
-
-# Helper for test setup, if needed (can be removed if create_test_user/game cover all needs)
-# def setup_test_data(db: Session):
-#     # Example: Create a user and some games for multiple tests to use
-#     user = user_crud.create_user(db, schemas.UserCreateDB(username="testuser", email="test@example.com", password_hash="hashedpassword", registration_date=datetime.now(UTC), user_age=30, is_admin=False))
-#     game1 = crud.create_game(db, schemas.GameCreate(game_name="Test Game 1", genre="Action", release_date=date(2023, 1, 1), platform="PC", igdb_id=100))
-#     game2 = crud.create_game(db, schemas.GameCreate(game_name="Test Game 2", genre="RPG", release_date=date(2023, 2, 1), platform="Console", igdb_id=101))
-#     return user, game1, game2
+from test_helpers import create_test_user, create_test_game
 
 # --- User CRUD Tests ---
 
@@ -48,7 +40,7 @@ def test_get_user_by_username(db_session: Session):
     retrieved_user = user_crud.get_user_by_username(db, username="findme_crud_test")
     assert retrieved_user is not None
     assert retrieved_user.username == "findme_crud_test"
-    assert retrieved_user.is_admin is True # This should now pass with user_crud.py fix
+    assert retrieved_user.is_admin is True
 
 def test_get_user_by_email(db_session: Session):
     db = db_session
@@ -65,7 +57,7 @@ def test_get_user_by_email(db_session: Session):
     assert retrieved_user is not None
     assert retrieved_user.email == "email_crud_test@example.com"
 
-def test_create_user_crud(db_session: Session): # Renamed to avoid confusion with API test
+def test_create_user_crud(db_session: Session):
     db = db_session
     user_data = schemas.UserCreateDB(username="new_user_crud", email="new_crud@example.com", password_hash="hashedpassword", registration_date=datetime.now(UTC), user_age=20, is_admin=False)
     db_user = user_crud.create_user(db=db, user=user_data)
@@ -84,13 +76,12 @@ def test_update_user(db_session: Session):
     db = db_session
     user_data = schemas.UserCreateDB(username="old_name", email="old@example.com", password_hash="oldhash", registration_date=datetime.now(UTC), user_age=20, is_admin=False)
     db_user = user_crud.create_user(db=db, user=user_data)
-    # is_admin can be updated through UserUpdate thanks to schema fix
     update_data = schemas.UserUpdate(username="new_name", email="new@example.com", user_age=25, is_admin=True)
     updated_user = user_crud.update_user(db=db, user_id=db_user.user_id, user_update=update_data)
     assert updated_user.username == "new_name"
     assert updated_user.email == "new@example.com"
     assert updated_user.user_age == 25
-    assert updated_user.is_admin is True # This should now pass with user_crud.py fix
+    assert updated_user.is_admin is True
 
 def test_delete_user(db_session: Session):
     db = db_session
@@ -124,9 +115,9 @@ def test_get_game_by_name(db_session: Session):
     game_name = "The Witcher 3: Wild Hunt (Test)" # Exact name used for creation
     game_data = schemas.GameCreate(game_name=game_name, genre="RPG", release_date=date(2015, 5, 19), platform="PC", igdb_id=3000)
     crud.create_game(db=db, game=game_data)
-    found_game = crud.get_game_by_name(db=db, game_name=game_name) # FIX: Use the exact game_name variable
+    found_game = crud.get_game_by_name(db=db, game_name=game_name)
     assert found_game is not None
-    assert found_game.game_name == game_name # New assertion
+    assert found_game.game_name == game_name
 
 def test_get_games(db_session: Session):
     db = db_session
@@ -143,7 +134,7 @@ def test_update_game(db_session: Session):
     updated_game = crud.update_game(db=db, game_id=db_game.game_id, game_update=update_data)
     assert updated_game.game_name == "Updated Name"
     assert updated_game.platform == "PS5"
-    assert updated_game.genre == "Original Genre" # Ensure unchanged fields remain
+    assert updated_game.genre == "Original Genre"
 
 def test_delete_game(db_session: Session):
     db = db_session
@@ -213,8 +204,9 @@ def test_get_ratings_with_comments_by_user(db_session: Session):
     crud.create_rating(db=db, rating=schemas.RatingCreate(user_id=user.user_id, game_id=game2.game_id, rating=4, comment="", rating_date=datetime.now(UTC))) # Empty comment
     other_user, _ = create_test_user(db, username="another_rater", email="another@example.com")
     crud.create_rating(db=db, rating=schemas.RatingCreate(user_id=other_user.user_id, game_id=game1.game_id, rating=1, comment="Other comment", rating_date=datetime.now(UTC)))
-    ratings_with_comments = user_crud.get_ratings_with_comments_by_user(db, user_id=user.user_id)
-    assert len(ratings_with_comments) == 1 # Only one rating for this user has a non-empty comment
+    ratings_with_comments = crud.get_ratings_with_comments_by_user(db, user_id=user.user_id)
+
+    assert len(ratings_with_comments) == 1
     assert ratings_with_comments[0].comment == "A test comment"
     assert ratings_with_comments[0].user_id == user.user_id
 
@@ -268,7 +260,7 @@ def test_create_backlog_item(db_session: Session):
     assert db_backlog_item.backlog_id is not None
     assert db_backlog_item.user_id == user.user_id
     assert db_backlog_item.game_id == game.game_id
-    assert db_backlog_item.status == schemas.BacklogStatus.playing
+    assert db_backlog_item.status.value == schemas.BacklogStatus.playing.value
 
 def test_get_backlog_item(db_session: Session):
     db = db_session
@@ -299,7 +291,7 @@ def test_update_backlog_item(db_session: Session):
     db_backlog_item = crud.create_backlog_item(db=db, backlog_item=backlog_item_data)
     update_data = schemas.BacklogItemUpdate(status=schemas.BacklogStatus.completed, rating=4.0)
     updated_item = crud.update_backlog_item(db=db, backlog_id=db_backlog_item.backlog_id, backlog_item_update=update_data)
-    assert updated_item.status == schemas.BacklogStatus.completed
+    assert updated_item.status.value == schemas.BacklogStatus.completed.value
     assert updated_item.rating == 4.0
 
 def test_delete_backlog_item(db_session: Session):
@@ -395,17 +387,14 @@ def test_get_user_recommendations(db_session: Session):
     # Get recommendations (this will now call user_crud.get_user_recommendations)
     recommendations = user_crud.get_user_recommendations(db, user_id=user.user_id, limit=5)
 
-    # Basic assertions - adjust based on expected recommendation logic
+    # Basic assertions
     assert isinstance(recommendations, list)
     assert len(recommendations) <= 5
     # Ensure recommended games are actually game objects and not already rated/in backlog
     recommended_game_ids = {g.game_id for g in recommendations}
     assert game1.game_id not in recommended_game_ids
     assert game2.game_id not in recommended_game_ids
-    # Assert that the logic attempts to recommend similar genres (e.g., if RPG was highly rated, expect other RPGs)
-    # This is a simplified check
     if game3.game_id in recommended_game_ids:
         assert True # Game3 (RPG) might be recommended if Game1 (RPG) was highly rated
     else:
         assert True # Recommendation logic is complex, just checking it runs
-    # You might want more specific assertions depending on your recommendation algorithm
