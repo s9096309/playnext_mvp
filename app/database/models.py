@@ -1,11 +1,22 @@
+# app/database/models.py
+
+"""
+SQLAlchemy models for the PlayNext database.
+
+This module defines the database schema for users, games, ratings,
+backlog items, and recommendations using SQLAlchemy's declarative base.
+"""
+
+import enum
 from sqlalchemy import Column, Integer, String, Float, DateTime, Date, Enum, ForeignKey, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
-import enum
 
 Base = declarative_base()
 
+
 class User(Base):
+    """SQLAlchemy model for the 'users' table."""
     __tablename__ = "users"
 
     user_id = Column(Integer, primary_key=True, index=True)
@@ -15,13 +26,15 @@ class User(Base):
     registration_date = Column(DateTime)
     user_age = Column(Integer)
     igdb_id = Column(Integer, nullable=True)
-    is_admin = Column(Boolean, default=False)  # Add is_admin column
+    is_admin = Column(Boolean, default=False)
 
     backlog_items = relationship("BacklogItem", back_populates="user")
     recommendations = relationship("Recommendation", back_populates="user")
     ratings = relationship("Rating", back_populates="user")
 
+
 class Game(Base):
+    """SQLAlchemy model for the 'games' table."""
     __tablename__ = "games"
 
     game_id = Column(Integer, primary_key=True, index=True)
@@ -37,12 +50,16 @@ class Game(Base):
     recommendations = relationship("Recommendation", back_populates="game")
     ratings = relationship("Rating", back_populates="game")
 
+
 class BacklogStatus(enum.Enum):
-    playing = "playing"
-    completed = "completed"
-    dropped = "dropped"
+    """Enum for the possible statuses of a game in a user's backlog."""
+    PLAYING = "playing"
+    COMPLETED = "completed"
+    DROPPED = "dropped"
+
 
 class BacklogItem(Base):
+    """SQLAlchemy model for the 'backlog_items' table."""
     __tablename__ = "backlog_items"
 
     backlog_id = Column(Integer, primary_key=True, index=True)
@@ -54,7 +71,9 @@ class BacklogItem(Base):
     user = relationship("User", back_populates="backlog_items")
     game = relationship("Game", back_populates="backlog_items")
 
+
 class Recommendation(Base):
+    """SQLAlchemy model for the 'recommendations' table."""
     __tablename__ = "recommendations"
 
     recommendation_id = Column(Integer, primary_key=True, index=True)
@@ -67,7 +86,9 @@ class Recommendation(Base):
     user = relationship("User", back_populates="recommendations")
     game = relationship("Game", back_populates="recommendations")
 
+
 class Rating(Base):
+    """SQLAlchemy model for the 'ratings' table."""
     __tablename__ = "ratings"
 
     rating_id = Column(Integer, primary_key=True, index=True)

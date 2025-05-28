@@ -1,25 +1,28 @@
 # app/database/user_crud.py
+
+from typing import List, Optional
+from datetime import datetime
+
 from sqlalchemy.orm import Session
 from sqlalchemy import desc, asc
-from typing import List, Optional
-from datetime import datetime, UTC # Import UTC for the deprecation fix
+
+from app.utils.auth import get_password_hash
 from . import models, schemas
 
 
-def get_user(db: Session, user_id: int):
-    """Retrieves a user by their user ID."""
+def get_user(db: Session, user_id: int) -> Optional[models.User]:
     return db.query(models.User).filter(models.User.user_id == user_id).first()
 
-def get_user_by_username(db: Session, username: str):
-    """Retrieves a user by their username."""
+
+def get_user_by_username(db: Session, username: str) -> Optional[models.User]:
     return db.query(models.User).filter(models.User.username == username).first()
 
-def get_user_by_email(db: Session, email: str):
-    """Retrieves a user by their email address."""
+
+def get_user_by_email(db: Session, email: str) -> Optional[models.User]:
     return db.query(models.User).filter(models.User.email == email).first()
 
-def create_user(db: Session, user: schemas.UserCreateDB):
-    """Creates a new user in the database."""
+
+def create_user(db: Session, user: schemas.UserCreateDB) -> models.User:
     db_user = models.User(
         username=user.username,
         email=user.email,
@@ -33,72 +36,68 @@ def create_user(db: Session, user: schemas.UserCreateDB):
     db.refresh(db_user)
     return db_user
 
-def get_users(db: Session, skip: int = 0, limit: int = 100):
-    """Retrieves a list of all users."""
+
+def get_users(db: Session, skip: int = 0, limit: int = 100) -> List[models.User]:
     return db.query(models.User).offset(skip).limit(limit).all()
 
-from app.utils.auth import get_password_hash
 
-def update_user(db: Session, user_id: int, user_update: schemas.UserUpdate) -> models.User:
+def update_user(db: Session, user_id: int, user_update: schemas.UserUpdate) -> Optional[models.User]:
     db_user = db.query(models.User).filter(models.User.user_id == user_id).first()
     if not db_user:
         return None
 
-    # Get a dictionary of fields from the update schema,
-    # but only include those that were explicitly set in the request.
-    update_data = user_update.model_dump(exclude_unset=True) # <-- Crucial line!
+    update_data = user_update.model_dump(exclude_unset=True)
 
     for key, value in update_data.items():
-        if key == "password": # Handle password hashing if 'password' is in UserUpdate
+        if key == "password":
             setattr(db_user, "password_hash", get_password_hash(value))
         else:
             setattr(db_user, key, value)
 
-    db.add(db_user) # Mark as dirty for update, usually tracked already
+    db.add(db_user)
     db.commit()
-    db.refresh(db_user) # Refresh to get latest state from DB
+    db.refresh(db_user)
     return db_user
 
-def delete_user(db: Session, user_id: int):
-    """Deletes a user from the database."""
+
+def delete_user(db: Session, user_id: int) -> Optional[models.User]:
     db_user = db.query(models.User).filter(models.User.user_id == user_id).first()
     if db_user:
         db.delete(db_user)
         db.commit()
-    return db_user # Returns the deleted user object, or None if not found
+    return db_user
+
 
 def get_user_backlog(db: Session, user_id: int) -> List[models.BacklogItem]:
-    """Retrieves all backlog items for a specific user."""
     return db.query(models.BacklogItem).filter(models.BacklogItem.user_id == user_id).all()
 
+
 def get_ratings_by_user(db: Session, user_id: int) -> List[models.Rating]:
-    """Retrieves all ratings made by a specific user."""
     return db.query(models.Rating).filter(models.Rating.user_id == user_id).all()
 
+
 def get_user_recommendations(db: Session, user_id: int, limit: int = 10) -> List[models.Game]:
-    """
-    Retrieves game recommendations for a specific user based on their ratings and backlog.
-    This is a simplified example. Real-world recommendations are more complex.
-    """
     user_ratings = db.query(models.Rating).filter(models.Rating.user_id == user_id).order_by(
         desc(models.Rating.rating)).limit(5).all()
     user_backlog = db.query(models.BacklogItem).filter(models.BacklogItem.user_id == user_id).all()
 
-    recommended_games = set()
-    seen_game_ids = set(rating.game_id for rating in user_ratings) | set(item.game_id for item in user_backlog)
+    recommended_games_set = set()
+    seen_game_ids = {rating.game_id for rating in user_ratings} | \
+                   {item.game_id for item in user_backlog}
 
     for rating in user_ratings:
         game = db.query(models.Game).filter(models.Game.game_id == rating.game_id).first()
         if game and game.genre:
             genres = [g.strip() for g in game.genre.split(',')]
             for genre in genres:
-                similar_games = db.query(models.Game).filter(models.Game.genre.like(f"%{genre}%"),
-                                                             models.Game.game_id.notin_(seen_game_ids)).limit(
-                    3).all()
+                similar_games = db.query(models.Game).filter(
+                    models.Game.genre.like(f"%{genre}%"),
+                    models.Game.game_id.notin_(seen_game_ids)
+                ).limit(3).all()
                 for similar_game in similar_games:
-                    recommended_games.add(similar_game)
+                    recommended_games_set.add(similar_game)
                     seen_game_ids.add(similar_game.game_id)
-                    if len(recommended_games) >= limit:
-                        return list(recommended_games)[:limit]
+                    if len(recommended_games_set) >= limit:
+                        return list(recommended_games_set)[:limit]
 
-    return list(recommended_games)[:limit]
+    return list(recommended_games_set)[:limit]

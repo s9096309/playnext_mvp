@@ -1,179 +1,227 @@
+# app/recommendations_utils.py
+
+"""
+Utility functions for calculating similarities and generating recommendations.
+
+This module provides functions for calculating cosine similarity, Pearson correlation,
+user-user similarities, creating item-user matrices, calculating item-item similarities,
+and predicting user ratings.
+"""
+
 import math
-import requests
-from collections import defaultdict
 import os
-import requests
-from dotenv import load_dotenv
+from collections import defaultdict
+from typing import Dict, List, Set, Tuple, Any, Callable
 
-load_dotenv()
+# Assuming environment variables are loaded globally or in app.main.py
+# If this module directly accesses env vars, ensure dotenv is loaded somewhere.
+# from dotenv import load_dotenv
+# load_dotenv()
 
-IGDB_CLIENT_ID = os.getenv("IGDB_CLIENT_ID")
-IGDB_CLIENT_SECRET = os.getenv("IGDB_CLIENT_SECRET")
+# Removed duplicated IGDB API client logic as it should be centralized
+# in app.utils.igdb_utils.py.
+# If you still need IGDB functions here, import them from app.utils.igdb_utils.py
+# from app.utils import igdb_utils
 
-def get_igdb_access_token():
-    """Fetches an IGDB access token."""
-    url = f"https://id.twitch.tv/oauth2/token?client_id={IGDB_CLIENT_ID}&client_secret={IGDB_CLIENT_SECRET}&grant_type=client_credentials"
-    response = requests.post(url)
-    response.raise_for_status()  # Raise an exception for bad status codes (4xx or 5xx)
-    return response.json()["access_token"]
 
-def get_igdb_game_data(igdb_id):
-    """Fetches game data from the IGDB API."""
-    access_token = get_igdb_access_token()
-    url = "https://api.igdb.com/v4/games"
-    headers = {
-        "Client-ID": IGDB_CLIENT_ID,
-        "Authorization": f"Bearer {access_token}",
-        "Accept": "application/json",
-    }
-    data = f'fields slug; where id = {igdb_id};'
-    response = requests.post(url, headers=headers, data=data)
-    response.raise_for_status()
-    game_data = response.json()
-    print(f"IGDB Data for ID {igdb_id}: {game_data}") #Debug print
-    if game_data and len(game_data) > 0 and 'slug' in game_data[0]:
-      print(f"Slug Value: {game_data[0]['slug']}") #debug print
-    return game_data
+def cosine_similarity(user1_ratings: Dict[int, float], user2_ratings: Dict[int, float]) -> float:
+    """Calculates cosine similarity between two users' ratings.
 
-def cosine_similarity(user1_ratings, user2_ratings):
-    """Calculates cosine similarity between two users' ratings."""
+    Args:
+        user1_ratings (Dict[int, float]): Dictionary of game_id to rating for user 1.
+        user2_ratings (Dict[int, float]): Dictionary of game_id to rating for user 2.
 
+    Returns:
+        float: The cosine similarity score, ranging from -1 to 1. Returns 0 if no
+               common games or magnitudes are zero.
+    """
     common_games = set(user1_ratings.keys()) & set(user2_ratings.keys())
 
     if not common_games:
-        return 0  # No common ratings, no similarity
+        return 0.0
 
-    dot_product = sum(user1_ratings[game] * user2_ratings[game] for game in common_games)
-    magnitude1 = math.sqrt(sum(user1_ratings[game] ** 2 for game in common_games))
-    magnitude2 = math.sqrt(sum(user2_ratings[game] ** 2 for game in common_games))
+    dot_product = sum(user1_ratings[game] * user2_ratings[game]
+                      for game in common_games)
+    magnitude1 = math.sqrt(sum(user1_ratings[game] ** 2
+                               for game in common_games))
+    magnitude2 = math.sqrt(sum(user2_ratings[game] ** 2
+                               for game in common_games))
 
     if magnitude1 == 0 or magnitude2 == 0:
-        return 0  # Avoid division by zero
+        return 0.0
 
     result = dot_product / (magnitude1 * magnitude2)
-    print(f"Cosine Similarity Result: {result}, type: {type(result)}") # Debugging line
     return result
 
-def pearson_correlation(user1_ratings, user2_ratings):
-    """Calculates Pearson correlation between two users' ratings."""
 
+def pearson_correlation(user1_ratings: Dict[int, float], user2_ratings: Dict[int, float]) -> float:
+    """Calculates Pearson correlation between two users' ratings.
+
+    Args:
+        user1_ratings (Dict[int, float]): Dictionary of game_id to rating for user 1.
+        user2_ratings (Dict[int, float]): Dictionary of game_id to rating for user 2.
+
+    Returns:
+        float: The Pearson correlation coefficient, ranging from -1 to 1.
+               Returns 0 if no common games or denominators are zero.
+    """
     common_games = set(user1_ratings.keys()) & set(user2_ratings.keys())
 
     if not common_games:
-        return 0  # No common ratings, no correlation
+        return 0.0
 
-    user1_avg = sum(user1_ratings[game] for game in common_games) / len(common_games)
-    user2_avg = sum(user2_ratings[game] for game in common_games) / len(common_games)
+    user1_avg = sum(user1_ratings[game] for game in common_games) / \
+        len(common_games)
+    user2_avg = sum(user2_ratings[game] for game in common_games) / \
+        len(common_games)
 
-    numerator = sum((user1_ratings[game] - user1_avg) * (user2_ratings[game] - user2_avg) for game in common_games)
-    denominator1 = math.sqrt(sum((user1_ratings[game] - user1_avg) ** 2 for game in common_games))
-    denominator2 = math.sqrt(sum((user2_ratings[game] - user2_avg) ** 2 for game in common_games))
+    numerator = sum((user1_ratings[game] - user1_avg) *
+                    (user2_ratings[game] - user2_avg) for game in common_games)
+    denominator1 = math.sqrt(sum((user1_ratings[game] - user1_avg) ** 2
+                                 for game in common_games))
+    denominator2 = math.sqrt(sum((user2_ratings[game] - user2_avg) ** 2
+                                 for game in common_games))
 
     if denominator1 == 0 or denominator2 == 0:
-        return 0  # Avoid division by zero
+        return 0.0
 
     result = numerator / (denominator1 * denominator2)
-    print(f"Pearson Correlation Result: {result}, type: {type(result)}") # Debugging line
     return result
 
-def calculate_user_similarities(user_ratings, similarity_function):
-    """Calculates user-user similarities using a given function."""
 
+def calculate_user_similarities(
+    user_ratings: Dict[int, Dict[int, float]],
+    similarity_function: Callable[[Dict[int, float], Dict[int, float]], float]
+) -> Dict[str, float]:
+    """Calculates user-user similarities using a given function.
+
+    Args:
+        user_ratings (Dict[int, Dict[int, float]]): A dictionary where keys are
+                                                 user_ids and values are
+                                                 dictionaries of game_id to rating.
+        similarity_function (Callable): The function to use for calculating
+                                        similarity (e.g., cosine_similarity, pearson_correlation).
+
+    Returns:
+        Dict[str, float]: A dictionary of similarities where keys are
+                          string representations of user ID pairs (e.g., "(1, 2)")
+                          and values are their similarity scores.
+    """
     user_ids = list(user_ratings.keys())
     similarities = {}
 
-    print(f"User IDs: {user_ids}")  # Inspect user IDs
+    for i, user1_id in enumerate(user_ids):
+        for user2_id in user_ids[i + 1:]:
+            similarity = similarity_function(user_ratings[user1_id],
+                                             user_ratings[user2_id])
 
-    for i in range(len(user_ids)):
-        for j in range(i + 1, len(user_ids)):
-            user1_id = user_ids[i]
-            user2_id = user_ids[j]
+            similarities[f"({user1_id}, {user2_id})"] = similarity
+            similarities[f"({user2_id}, {user1_id})"] = similarity
 
-            print(f"Calculating similarity between users {user1_id} and {user2_id}")  # Inspect users
-            print(f"User 1 Ratings: {user_ratings[user1_id]}")
-            print(f"User 2 Ratings: {user_ratings[user2_id]}")
-
-            similarity = similarity_function(user_ratings[user1_id], user_ratings[user2_id])
-
-            print(f"Similarity result: {similarity}") #inspect similarity result
-
-            similarities[f"({user1_id}, {user2_id})"] = similarity #convert tuple to string
-            print(f"Similarities Dictionary: {similarities}") # Debugging line
-            similarities[f"({user2_id}, {user1_id})"] = similarity  # Similarity is symmetric
-
-    print(f"Final Similarities: {similarities}") #inspect final similarities
     return similarities
 
-def create_item_user_matrix(ratings):
-    """Creates an item-user rating matrix from ratings data."""
-    print("Ratings received:")
-    for rating in ratings:
-        print(f"  - User: {rating.user_id}, Game: {rating.game_id}, Rating: {rating.rating}")
+
+def create_item_user_matrix(ratings: List[Any]) -> Dict[int, Dict[int, float]]:
+    """Creates an item-user rating matrix from ratings data.
+
+    Args:
+        ratings (List[Any]): A list of rating objects (e.g., from your models.Rating),
+                             each with `user_id`, `game_id`, and `rating` attributes.
+
+    Returns:
+        Dict[int, Dict[int, float]]: A dictionary where keys are game_ids and
+                                     values are dictionaries of user_id to rating.
+    """
     matrix = defaultdict(dict)
     for rating in ratings:
         matrix[rating.game_id][rating.user_id] = rating.rating
-    print("Item-User Matrix:")
-    for game_id, users in matrix.items():
-        print(f"  - Game: {game_id}, Users: {users}")
     return matrix
 
-def calculate_item_similarity(item_user_matrix):
-    """Calculates item-item similarities using cosine similarity."""
-    print("item_user_matrix received:", item_user_matrix)
+
+def calculate_item_similarity(item_user_matrix: Dict[int, Dict[int, float]]) -> Dict[str, float]:
+    """Calculates item-item similarities using cosine similarity.
+
+    Args:
+        item_user_matrix (Dict[int, Dict[int, float]]): An item-user rating matrix
+                                                         (game_id -> user_id -> rating).
+
+    Returns:
+        Dict[str, float]: A dictionary of similarities where keys are
+                          string representations of item ID pairs (e.g., "(1, 2)")
+                          and values are their similarity scores.
+    """
     item_ids = list(item_user_matrix.keys())
-    print(f"item_ids: {item_ids}")
     similarities = {}
 
-    for i in range(len(item_ids)):
-        for j in range(i + 1, len(item_ids)):
-            item1_id = item_ids[i]
-            item2_id = item_ids[j]
-            print(f"Comparing item {item1_id} and {item2_id}")
-
+    for i, item1_id in enumerate(item_ids):
+        for item2_id in item_ids[i + 1:]:
             item1_ratings = item_user_matrix[item1_id]
             item2_ratings = item_user_matrix[item2_id]
-            print(f"item1_ratings: {item1_ratings}")
-            print(f"item2_ratings: {item2_ratings}")
 
-            if not isinstance(item1_ratings, dict) or not isinstance(item2_ratings, dict):
-                print(f"Skipping similarity calculation for {item1_id} and {item2_id} due to invalid ratings data.")
+            if not isinstance(item1_ratings, dict) or \
+               not isinstance(item2_ratings, dict):
                 continue
 
             common_users = set(item1_ratings.keys()) & set(item2_ratings.keys())
-            print(f"common_users: {common_users}")
 
             if not common_users:
-                similarity = 0
+                similarity = 0.0
             else:
-                dot_product = sum(item1_ratings[user] * item2_ratings[user] for user in common_users)
-                magnitude1 = math.sqrt(sum(item1_ratings[user] ** 2 for user in common_users))
-                magnitude2 = math.sqrt(sum(item2_ratings[user] ** 2 for user in common_users))
+                dot_product = sum(item1_ratings[user] * item2_ratings[user]
+                                  for user in common_users)
+                magnitude1 = math.sqrt(sum(item1_ratings[user] ** 2
+                                           for user in common_users))
+                magnitude2 = math.sqrt(sum(item2_ratings[user] ** 2
+                                           for user in common_users))
 
                 if magnitude1 == 0 or magnitude2 == 0:
-                    similarity = 0
+                    similarity = 0.0
                 else:
                     similarity = dot_product / (magnitude1 * magnitude2)
 
             similarities[f"({item1_id}, {item2_id})"] = similarity
-            similarities[f"({item2_id}, {item1_id})"] = similarity #symmetric similarity.
-            print(f"similarity between {item1_id} and {item2_id}: {similarity}")
+            similarities[f"({item2_id}, {item1_id})"] = similarity
 
     return similarities
 
-def predict_rating(user_id, game_id, user_ratings, user_similarities):
-    """Predicts the rating a user would give to a game."""
 
-    numerator = 0
-    denominator = 0
-    for other_user_ids, similarity in user_similarities.items():
-        u1, u2 = map(int, other_user_ids.strip('()').split(', '))
+def predict_rating(
+    user_id: int,
+    game_id: int,
+    user_ratings: Dict[int, Dict[int, float]],
+    user_similarities: Dict[str, float]
+) -> float:
+    """Predicts the rating a user would give to a game using user-based collaborative filtering.
+
+    Args:
+        user_id (int): The ID of the user for whom to predict the rating.
+        game_id (int): The ID of the game for which to predict the rating.
+        user_ratings (Dict[int, Dict[int, float]]): A dictionary where keys are user_ids
+                                                     and values are dictionaries of
+                                                     game_id to rating.
+        user_similarities (Dict[str, float]): A dictionary of similarities where keys are
+                                              string representations of user ID pairs (e.g., "(1, 2)")
+                                              and values are their similarity scores.
+
+    Returns:
+        float: The predicted rating for the user-game pair. Returns 0 if no similar
+               users rated the game.
+    """
+    numerator = 0.0
+    denominator = 0.0
+
+    for user_pair_str, similarity in user_similarities.items():
+        u1, u2 = map(int, user_pair_str.strip('()').split(', '))
+
         other_user_id = u2 if u1 == user_id else u1
+        if other_user_id == user_id:
+            continue
 
         if game_id in user_ratings.get(other_user_id, {}):
             numerator += similarity * user_ratings[other_user_id][game_id]
             denominator += abs(similarity)
 
     if denominator == 0:
-        return 0  # No similar users rated the game
+        return 0.0
 
     return numerator / denominator
