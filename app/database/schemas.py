@@ -118,12 +118,6 @@ class BacklogItemBase(BaseModel):
     user_id: int
     game_id: int
     status: BacklogStatus
-    # REMOVED: rating: Optional[float] = Field(None, ge=1.0, le=10.0, description="User's rating for the game (1.0-10.0)")
-    # REMOVED: hours_played: Optional[float] = Field(None, ge=0.0, description="Hours played on the game")
-    # REMOVED: start_date: Optional[datetime.date] = None
-    # REMOVED: completion_date: Optional[datetime.date] = None
-    # REMOVED: notes: Optional[str] = None
-
 
     class Config:
         """Pydantic configuration."""
@@ -138,11 +132,6 @@ class BacklogItemCreate(BacklogItemBase):
 class BacklogItemUpdate(BaseModel):
     """Pydantic schema for updating an existing backlog item."""
     status: Optional[BacklogStatus] = None
-    # REMOVED: rating: Optional[float] = Field(None, ge=1.0, le=10.0)
-    # REMOVED: hours_played: Optional[float] = Field(None, ge=0.0)
-    # REMOVED: start_date: Optional[datetime.date] = None
-    # REMOVED: completion_date: Optional[datetime.date] = None
-    # REMOVED: notes: Optional[str] = None
     game_id: Optional[int] = None # Keep this if you want to allow changing the associated game
 
     class Config:
@@ -154,11 +143,6 @@ class BacklogItem(BacklogItemBase):
     """Pydantic schema for a complete backlog item record."""
     backlog_id: int
     added_date: datetime.datetime
-    # REMOVED: rating: Optional[float] = None # If you remove from base, also remove here
-    # REMOVED: hours_played: Optional[float] = None
-    # REMOVED: start_date: Optional[datetime.date] = None
-    # REMOVED: completion_date: Optional[datetime.date] = None
-    # REMOVED: notes: Optional[str] = None
 
     class Config:
         """Pydantic configuration."""
