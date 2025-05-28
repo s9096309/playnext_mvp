@@ -65,10 +65,6 @@ def get_game_by_name(
         Optional[models.Game]: The best matching game object if found above
                                 the threshold, otherwise None.
     """
-    # NOTE: fuzzywuzzy's `fuzz` was not imported in the original code,
-    # so I'm assuming it should be re-added if this function is actually used.
-    # For now, if you want this to work, you'll need `from fuzzywuzzy import fuzz`
-    # at the top of this file. If it's not used, consider removing this function.
     import fuzzywuzzy.fuzz as fuzz_lib # Temporarily re-import for this function
 
     games = db.query(models.Game).all()

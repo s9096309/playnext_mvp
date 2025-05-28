@@ -22,9 +22,9 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
 def create_access_token(data: dict, expires_delta: timedelta = None):
     to_encode = data.copy()
     if expires_delta:
-        expire = datetime.now(UTC) + expires_delta  # Changed to datetime.now(UTC)
+        expire = datetime.now(UTC) + expires_delta
     else:
-        expire = datetime.now(UTC) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)  # Changed to datetime.now(UTC)
+        expire = datetime.now(UTC) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
@@ -62,8 +62,6 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     if username is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
-    # *** THIS IS THE KEY CHANGE ***
-    # Now correctly calls user_crud for user retrieval
     user = user_crud.get_user_by_username(db, username=username)
 
     if user is None:
@@ -71,7 +69,6 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     return user
 
 
-# You might also want to add these helper dependencies if your application uses them:
 def get_current_active_user(current_user: models.User = Depends(get_current_user)) -> models.User:
     """Dependency to get the current active authenticated user."""
     # Add any checks for active status if applicable (e.g., is_active flag on your User model)

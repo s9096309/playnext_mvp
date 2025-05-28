@@ -39,7 +39,7 @@ def create_user(db: Session, user: schemas.UserCreateDB) -> models.User:
         user_age=user.user_age,
         is_admin=user.is_admin,
         registration_date=user.registration_date,
-        igdb_id=user.igdb_id # Ensure igdb_id is passed if it's in your models.User and schemas.UserCreateDB
+        igdb_id=user.igdb_id
     )
     db.add(db_user)
     db.commit()
@@ -127,10 +127,6 @@ def get_user_recommendations(db: Session, user_id: int, limit: int = 10) -> List
                         return list(recommended_games_set)[:limit]
 
     return list(recommended_games_set)[:limit]
-
-# You might have other CRUD functions for Game, Rating, BacklogItem here.
-# For simplicity, I'm only showing the user-related ones and the specific
-# recommendation function that was in your provided user_crud.py.
 
 def get_rating_by_user_and_game(db: Session, user_id: uuid.UUID, game_id: int):
     """
