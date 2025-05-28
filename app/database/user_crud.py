@@ -1,10 +1,9 @@
 # app/database/user_crud.py
-
+import uuid
 from typing import List, Optional
 from datetime import datetime, timezone # Added timezone import
 from sqlalchemy.orm import Session
-from sqlalchemy import desc, asc # Keep these if used elsewhere for ordering, otherwise they can be removed
-
+from sqlalchemy import desc, asc, and_
 from app.utils.auth import get_password_hash
 from . import models, schemas
 
@@ -132,3 +131,11 @@ def get_user_recommendations(db: Session, user_id: int, limit: int = 10) -> List
 # You might have other CRUD functions for Game, Rating, BacklogItem here.
 # For simplicity, I'm only showing the user-related ones and the specific
 # recommendation function that was in your provided user_crud.py.
+
+def get_rating_by_user_and_game(db: Session, user_id: uuid.UUID, game_id: int):
+    """
+    Retrieves a single rating by user_id and game_id.
+    """
+    return db.query(models.Rating).filter(
+        and_(models.Rating.user_id == user_id, models.Rating.game_id == game_id)
+    ).first()
