@@ -253,13 +253,13 @@ def test_create_backlog_item(db_session: Session):
     backlog_item_data = schemas.BacklogItemCreate(
         user_id=user.user_id,
         game_id=game.game_id,
-        status=schemas.BacklogStatus.PLAYING # Pass the enum member directly
+        status=schemas.BacklogStatus.PLAYING
     )
     db_backlog_item = crud.create_backlog_item(db=db, backlog_item=backlog_item_data)
     assert db_backlog_item.backlog_id is not None
     assert db_backlog_item.user_id == user.user_id
     assert db_backlog_item.game_id == game.game_id
-    assert db_backlog_item.status == schemas.BacklogStatus.PLAYING # Assert with the enum member
+    assert db_backlog_item.status == schemas.BacklogStatus.PLAYING
 
 def test_get_backlog_item(db_session: Session):
     db = db_session
@@ -270,7 +270,7 @@ def test_get_backlog_item(db_session: Session):
     retrieved_item = crud.get_backlog_item(db, backlog_id=db_backlog_item.backlog_id)
     assert retrieved_item is not None
     assert retrieved_item.user_id == user.user_id
-    assert retrieved_item.status == schemas.BacklogStatus.COMPLETED # Assert with the enum member
+    assert retrieved_item.status == schemas.BacklogStatus.COMPLETED
 
 def test_get_user_backlog(db_session: Session):
     db = db_session
