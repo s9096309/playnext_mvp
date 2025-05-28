@@ -1,19 +1,12 @@
 # app/main.py
 
-"""
-Main entry point for the PlayNext FastAPI application.
-
-Initializes the FastAPI app, includes API routers, and defines event handlers.
-"""
-
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.orm import Session
 
 from app.database import crud, models
-from app.database.session import engine, get_db
+from app.database.session import create_tables, get_db
 from app.routers import auth, backlog_items, games, ratings, recommendations, users
 
 
@@ -25,9 +18,12 @@ async def lifespan(app: FastAPI):
 
     Ensures database tables are created on startup.
     """
-    # Create all database tables on startup
-    models.Base.metadata.create_all(bind=engine)
+    # Create all database tables on startup using the dedicated function
+    create_tables() # This will call get_engine() internally
+    print("Database tables created/checked.")
     yield
+    # On shutdown, perform any cleanup if necessary
+    print("Application shutdown.")
 
 
 app = FastAPI(
@@ -40,7 +36,7 @@ app = FastAPI(
 # Configure CORS (Cross-Origin Resource Sharing) middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Adjust this to your frontend URL in production
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
