@@ -10,10 +10,11 @@ from app.utils.auth import get_current_user
 router = APIRouter(prefix="/games", tags=["games"])
 
 @router.post("/", response_model=schemas.Game)
-def create_game(title: str = Query(..., description="Game title"), db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    """
-    Create a game by title, fetching data from IGDB.
-    """
+def create_game(
+    title: str = Query(..., description="Game title"),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
     igdb_games = igdb_utils.search_games_igdb(title)
     if not igdb_games:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Game not found on IGDB")
@@ -41,7 +42,7 @@ def create_game(title: str = Query(..., description="Game title"), db: Session =
         else:
             age_rating = None
 
-    release_date = "2000-01-01"  # Default date
+    release_date = datetime(2000, 1, 1).date()
     if 'release_dates' in igdb_game and igdb_game['release_dates']:
         release_date_str = igdb_game['release_dates'][0].get('human')
         if release_date_str:
@@ -63,7 +64,14 @@ def create_game(title: str = Query(..., description="Game title"), db: Session =
     return crud.create_game(db=db, game=game_data)
 
 @router.get("/", response_model=list[schemas.Game])
-def read_games(skip: int = 0, limit: int = 100, sort_by: Optional[str] = None, genre: Optional[str] = None, platform: Optional[str] = None, db: Session = Depends(get_db)):
+def read_games(
+    skip: int = 0,
+    limit: int = 100,
+    sort_by: Optional[str] = None,
+    genre: Optional[str] = None,
+    platform: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
     games = crud.get_games(db, skip=skip, limit=limit, sort_by=sort_by, genre=genre, platform=platform)
     for game in games:
         if game.image_url is None:
@@ -71,7 +79,12 @@ def read_games(skip: int = 0, limit: int = 100, sort_by: Optional[str] = None, g
     return games
 
 @router.put("/{game_id}", response_model=schemas.Game)
-def update_game(game_id: int, game: schemas.GameUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+def update_game(
+    game_id: int,
+    game: schemas.GameUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
     db_game = crud.get_game(db, game_id=game_id)
     if db_game is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Game not found")
@@ -80,7 +93,11 @@ def update_game(game_id: int, game: schemas.GameUpdate, db: Session = Depends(ge
     return crud.update_game(db=db, game_id=game_id, game_update=game)
 
 @router.delete("/{game_id}", response_model=schemas.Game)
-def delete_game(game_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+def delete_game(
+    game_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
     db_game = crud.get_game(db, game_id=game_id)
     if db_game is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Game not found")
@@ -90,17 +107,11 @@ def delete_game(game_id: int, db: Session = Depends(get_db), current_user: model
 
 @router.get("/search/{query}", response_model=List[schemas.Game])
 def search_games(query: str, db: Session = Depends(get_db)):
-    """
-    Search for games, prioritizing the local database and then IGDB,
-    and storing IGDB results in the database.
-    """
-    # 1. Search local database
     db_games = crud.search_games_db(db, query=query)
 
     if db_games:
-        return db_games  # Return local results if found
+        return db_games
 
-    # 2. If not found in the local database, search IGDB
     igdb_games = igdb_utils.search_games_igdb(query)
     if not igdb_games:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No games found")
@@ -121,7 +132,7 @@ def search_games(query: str, db: Session = Depends(get_db)):
             if valid_ratings:
                 age_rating = max(valid_ratings)
 
-        release_date = "2000-01-01"
+        release_date = datetime(2000, 1, 1).date()
         if 'release_dates' in igdb_game and igdb_game['release_dates']:
             release_date_str = igdb_game['release_dates'][0].get('human')
             if release_date_str:
@@ -140,7 +151,6 @@ def search_games(query: str, db: Session = Depends(get_db)):
             age_rating=age_rating,
         )
 
-        # Store the IGDB game in the database if it doesn't exist
         db_game = crud.create_game_if_not_exists(db=db, game=game_data)
         games.append(db_game)
 

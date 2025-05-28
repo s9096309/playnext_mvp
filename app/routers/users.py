@@ -3,7 +3,6 @@ from sqlalchemy.orm import Session
 from app.database import models, schemas
 from app.database.session import get_db
 from app.database import user_crud
-from app.routers import recommendations # Assuming this is for other non-user-specific recommendations
 from app.utils.auth import get_current_user, get_password_hash
 from datetime import datetime, UTC
 
@@ -26,9 +25,10 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
         password_hash=hashed_password,
         registration_date=datetime.now(UTC),
         user_age=user.user_age,
-        is_admin=False # Default to False for new registrations via this endpoint
+        is_admin=False
     )
     return user_crud.create_user(db=db, user=user_create_db)
+
 @router.get("/me", response_model=schemas.User)
 def read_current_user(current_user: models.User = Depends(get_current_user)):
     return current_user
@@ -51,11 +51,12 @@ def read_users(skip: int = 0, limit: int = 100, current_user: models.User = Depe
     return users
 
 @router.put("/{user_id}", response_model=schemas.User)
-def update_user(user_id: int, user: schemas.UserUpdate, current_user: models.User = Depends(get_current_user),
-                db: Session = Depends(get_db)):
-    """
-    Update a user's profile.
-    """
+def update_user(
+    user_id: int,
+    user: schemas.UserUpdate,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     if user_id != current_user.user_id and not current_user.is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to update this user")
 
@@ -65,10 +66,11 @@ def update_user(user_id: int, user: schemas.UserUpdate, current_user: models.Use
     return db_user
 
 @router.delete("/{user_id}", response_model=schemas.User)
-def delete_user(user_id: int, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
-    """
-    Delete a user.
-    """
+def delete_user(
+    user_id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     if user_id != current_user.user_id and not current_user.is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to delete this user")
 
@@ -78,7 +80,11 @@ def delete_user(user_id: int, current_user: models.User = Depends(get_current_us
     return db_user
 
 @router.put("/me", response_model=schemas.User)
-def update_current_user(user_update: schemas.UserUpdate, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+def update_current_user(
+    user_update: schemas.UserUpdate,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     return user_crud.update_user(db=db, user_id=current_user.user_id, user_update=user_update)
 
 @router.delete("/me", response_model=schemas.User)
@@ -86,28 +92,20 @@ def delete_current_user(current_user: models.User = Depends(get_current_user), d
     user_crud.delete_user(db, user_id=current_user.user_id)
     return current_user
 
-
 @router.get("/me/backlog", response_model=list[schemas.BacklogItem])
 def read_users_me_backlog(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
-    """
-    Get the backlog of the currently authenticated user.
-    """
     backlog_items = user_crud.get_user_backlog(db, user_id=current_user.user_id)
     return backlog_items
 
 @router.get("/me/ratings", response_model=list[schemas.Rating])
 def read_users_me_ratings(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
-    """
-    Get the ratings of the currently authenticated user.
-    """
     ratings = user_crud.get_ratings_by_user(db, user_id=current_user.user_id)
     return ratings
 
 @router.get("/me/recommendations", response_model=schemas.RecommendationResponse)
-async def read_users_me_recommendations(current_user: models.User = Depends(get_current_user),
-                                        db: Session = Depends(get_db)):
-    """
-    Get the recommendations for the currently authenticated user.
-    """
+async def read_users_me_recommendations(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     user_request = schemas.UserRequest(user_id=current_user.user_id)
     return user_crud.get_user_recommendations(db=db, user_id=user_request.user_id)

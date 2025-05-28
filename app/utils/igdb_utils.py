@@ -1,87 +1,110 @@
+# app/utils/igdb_utils.py
+
+"""
+Utility functions for interacting with the IGDB API.
+
+This module handles authentication with IGDB and provides methods to
+search for games, retrieve game details by ID, and fetch cover image URLs.
+It also includes a mapping for IGDB age ratings to a simplified format.
+"""
+
 import os
-from igdb.wrapper import IGDBWrapper
 import json
+from igdb.wrapper import IGDBWrapper
+from dotenv import load_dotenv
+
+load_dotenv()
 
 CLIENT_ID = os.getenv("IGDB_CLIENT_ID")
-CLIENT_SECRET = os.getenv("IGDB_CLIENT_SECRET") # Changed from APP_ACCESS_TOKEN
+CLIENT_SECRET = os.getenv("IGDB_CLIENT_SECRET")
 
-print(f"IGDB_CLIENT_ID: {CLIENT_ID}")
-# Masking the secret for safety, even in local debugging output
-print(f"IGDB_CLIENT_SECRET: {'*' * len(CLIENT_SECRET) if CLIENT_SECRET else 'None'}")
+if not CLIENT_ID or not CLIENT_SECRET:
+    raise ValueError(
+        "IGDB_CLIENT_ID or IGDB_CLIENT_SECRET not found in environment variables."
+        " Please ensure your .env file or deployment environment sets these."
+    )
 
-if not CLIENT_ID or not CLIENT_SECRET: # Changed condition
-    raise ValueError("IGDB_CLIENT_ID or IGDB_CLIENT_SECRET not found in environment variables.") # Changed error message
+wrapper = IGDBWrapper(CLIENT_ID, CLIENT_SECRET)
 
-# The IGDBWrapper will now use your CLIENT_SECRET to internally get the APP_ACCESS_TOKEN.
-wrapper = IGDBWrapper(CLIENT_ID, CLIENT_SECRET) # Changed second argument
+def search_games_igdb(query: str) -> list[dict] | None:
+    """
+    Searches for games on IGDB by query string.
 
-def search_games_igdb(query):
+    Args:
+        query (str): The search query for the game title.
+
+    Returns:
+        list[dict] | None: A list of dictionaries representing game data from IGDB,
+                           or None if an error occurs.
+    """
     try:
         byte_array = wrapper.api_request(
             "games",
-            f'search "{query}"; fields name, cover.url, genres.name, platforms.name, id, age_ratings.rating, release_dates.human; limit 10;'
+            (f'search "{query}"; fields name, cover.url, genres.name, '
+             'platforms.name, id, age_ratings.rating, release_dates.human; limit 10;')
         )
-        # import json # This line is redundant if json is imported at the top
         result = json.loads(byte_array)
-        print("IGDB API Response:", result) # Add this line for debugging
         return result
     except Exception as e:
         print(f"Error searching IGDB: {e}")
         return None
 
-def get_game_by_id_igdb(game_id):
+def get_game_by_id_igdb(game_id: int) -> list[dict] | None:
+    """
+    Retrieves game details from IGDB by its unique IGDB ID.
+
+    Args:
+        game_id (int): The unique ID of the game on IGDB.
+
+    Returns:
+        list[dict] | None: A list of dictionaries representing game data from IGDB,
+                           or None if an error occurs.
+    """
     try:
         byte_array = wrapper.api_request(
             "games",
-            f'fields name, cover.url, genres.name, platforms.name, id, age_ratings.rating, release_dates.human; where id = {game_id};'
+            (f'fields name, cover.url, genres.name, platforms.name, id, '
+             f'age_ratings.rating, release_dates.human; where id = {game_id};')
         )
-        # import json # This line is redundant if json is imported at the top
         result = json.loads(byte_array)
-        print("IGDB API Response (get_game_by_id): ", result)
         return result
     except Exception as e:
         print(f"Error getting game from IGDB: {e}")
         return None
 
-def get_cover_url(cover_id):
+def get_cover_url(cover_id: int) -> str | None:
     """
     Retrieves the cover URL for a game from the IGDB API.
 
     Args:
-        cover_id (int): The ID of the cover.
+        cover_id (int): The ID of the cover image.
 
     Returns:
-        str: The URL of the cover, or None if an error occurs.
+        str | None: The URL of the cover, or None if an error occurs or URL not found.
     """
-    print(f"DEBUG: get_cover_url called with cover_id: {cover_id}")  # Debug: Print the input
-
     try:
         byte_array = wrapper.api_request(
             "covers",
-            f'fields url; where id = ({cover_id});' # Only the integer id here.
+            f'fields url; where id = ({cover_id});'
         )
-        print(f"DEBUG: IGDB API response byte_array: {byte_array}")  # Debug: Print the raw response
 
-        if byte_array is None: #check if the byte_array is none.
-            print(f"DEBUG: IGDB API request returned None for cover_id: {cover_id}")
+        if byte_array is None:
             return None
 
         result = json.loads(byte_array)
-        print(f"DEBUG: IGDB API response JSON: {result}")  # Debug: Print the parsed JSON
 
         if result and len(result) > 0 and 'url' in result[0]:
             url = result[0]['url'].replace('t_thumb', 't_cover_big')
-            url = "https:" + url
-            print(f"DEBUG: Returning cover URL: {url}")  # Debug: Print the final URL
+            if not url.startswith("https:"):
+                url = "https:" + url
             return url
         else:
-            print(f"Error: Could not find url in IGDB response: {result}")
             return None
     except Exception as e:
         print(f"Error getting cover url from IGDB: {e}")
         return None
 
-IGDB_AGE_RATING_MAP = {
+IGDB_AGE_RATING_MAP: dict[int, str] = {
     1: "3",
     2: "7",
     3: "12",
@@ -109,5 +132,15 @@ IGDB_AGE_RATING_MAP = {
     25: "ACB RC",
 }
 
-def map_igdb_age_rating(igdb_rating):
+def map_igdb_age_rating(igdb_rating: int) -> str | None:
+    """
+    Maps an IGDB age rating ID to a more human-readable string.
+
+    Args:
+        igdb_rating (int): The integer ID of the age rating from IGDB.
+
+    Returns:
+        str | None: The mapped age rating string (e.g., "E10+", "PEGI 18"),
+                    or None if the ID is not found in the map.
+    """
     return IGDB_AGE_RATING_MAP.get(igdb_rating)

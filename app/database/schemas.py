@@ -1,12 +1,17 @@
-from pydantic import BaseModel
+# app/database/schemas.py
+
 from datetime import datetime, date
-from typing import Optional, List
 import enum
+from typing import Optional, List
+
+from pydantic import BaseModel
+
 
 class BacklogStatus(str, enum.Enum):
-    playing = "playing"
-    completed = "completed"
-    dropped = "dropped"
+    PLAYING = "playing"
+    COMPLETED = "completed"
+    DROPPED = "dropped"
+
 
 class BacklogItemCreate(BaseModel):
     user_id: int
@@ -14,11 +19,13 @@ class BacklogItemCreate(BaseModel):
     status: BacklogStatus
     rating: Optional[float] = None
 
+
 class BacklogItemUpdate(BaseModel):
     user_id: Optional[int] = None
     game_id: Optional[int] = None
     status: Optional[BacklogStatus] = None
     rating: Optional[float] = None
+
 
 class BacklogItem(BaseModel):
     backlog_id: int
@@ -30,19 +37,22 @@ class BacklogItem(BaseModel):
     class Config:
         from_attributes = True
 
-# User Schemas
+
 class UserBase(BaseModel):
     username: str
     email: str
     user_age: Optional[int] = None
 
+
 class UserCreate(UserBase):
     password: str
+
 
 class UserCreateDB(UserBase):
     password_hash: str
     registration_date: datetime
     is_admin: bool
+
 
 class UserUpdate(BaseModel):
     username: Optional[str] = None
@@ -50,6 +60,7 @@ class UserUpdate(BaseModel):
     password: Optional[str] = None
     user_age: Optional[int] = None
     is_admin: Optional[bool] = None
+
 
 class User(UserBase):
     user_id: int
@@ -60,7 +71,7 @@ class User(UserBase):
     class Config:
         from_attributes = True
 
-# Game Schemas
+
 class GameBase(BaseModel):
     game_name: str
     genre: str
@@ -70,8 +81,10 @@ class GameBase(BaseModel):
     image_url: Optional[str] = None
     age_rating: Optional[str] = None
 
+
 class GameCreate(GameBase):
     pass
+
 
 class GameUpdate(BaseModel):
     game_name: Optional[str] = None
@@ -82,13 +95,14 @@ class GameUpdate(BaseModel):
     image_url: Optional[str] = None
     age_rating: Optional[str] = None
 
+
 class Game(GameBase):
     game_id: int
 
     class Config:
         from_attributes = True
 
-# Recommendation Schemas
+
 class RecommendationBase(BaseModel):
     user_id: int
     game_id: int
@@ -96,8 +110,10 @@ class RecommendationBase(BaseModel):
     recommendation_reason: str
     documentation_rating: Optional[float] = None
 
+
 class RecommendationCreate(RecommendationBase):
     pass
+
 
 class RecommendationUpdate(BaseModel):
     user_id: Optional[int] = None
@@ -106,13 +122,14 @@ class RecommendationUpdate(BaseModel):
     recommendation_reason: Optional[str] = None
     documentation_rating: Optional[float] = None
 
+
 class Recommendation(RecommendationBase):
     recommendation_id: int
 
     class Config:
         from_attributes = True
 
-# Rating Schemas
+
 class RatingBase(BaseModel):
     user_id: int
     game_id: int
@@ -120,8 +137,10 @@ class RatingBase(BaseModel):
     comment: Optional[str] = None
     rating_date: datetime
 
+
 class RatingCreate(RatingBase):
     pass
+
 
 class RatingUpdate(BaseModel):
     user_id: Optional[int] = None
@@ -130,35 +149,37 @@ class RatingUpdate(BaseModel):
     comment: Optional[str] = None
     rating_date: Optional[datetime] = None
 
+
 class Rating(RatingBase):
     rating_id: int
 
     class Config:
         from_attributes = True
 
-# Token Schema
+
 class Token(BaseModel):
     access_token: str
     token_type: str
 
-# Rating for Current User Schema
+
 class RatingCreateMe(BaseModel):
     game_id: int
     rating: float
     comment: str
     rating_date: datetime
 
-# Recommendation Response Schemas
+
 class StructuredRecommendation(BaseModel):
     game_name: str
     genre: str
     igdb_link: Optional[str] = None
     reasoning: Optional[str] = None
 
+
 class RecommendationResponse(BaseModel):
     structured_recommendations: List[StructuredRecommendation]
     gemini_response: str
 
-# User Request schema
+
 class UserRequest(BaseModel):
     user_id: int
