@@ -17,3 +17,4 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 print(verify_password("test1234", "$2b$12$m.KRJ6ykTIK4PsEzbigza.2hD/N6ullWHn7u.FsYYqAb/oEMU3avO"))
+
