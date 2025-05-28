@@ -1,9 +1,11 @@
+# tests/test_ratings.py
+
 import pytest
 import uuid
 from fastapi import status
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
-from datetime import datetime, timedelta, date, UTC
+from datetime import datetime, timedelta, date, UTC # Ensure UTC is imported
 from app.main import app
 from app.database import models, schemas, crud
 from app.database import user_crud
@@ -23,7 +25,8 @@ def test_create_rating_unauthenticated(client):
         "comment": "a very SOLID game",
         "rating_date": datetime.now(UTC).isoformat()
     }
-    response = client.post("/ratings/me/", json=rating_payload)
+    # Corrected path: /users/me/ratings/
+    response = client.post("/users/me/ratings/", json=rating_payload)
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.json() == {"detail": "Not authenticated"}
 
@@ -43,7 +46,8 @@ def test_create_rating_authenticated(db_session: Session, client: TestClient):
         "comment": "This game is awesome!",
         "rating_date": datetime.now(UTC).isoformat()
     }
-    response = client.post("/ratings/me/", headers=headers, json=rating_payload)
+    # Corrected path: /users/me/ratings/
+    response = client.post("/users/me/ratings/", headers=headers, json=rating_payload)
 
     assert response.status_code == status.HTTP_200_OK
     response_data = response.json()
@@ -85,8 +89,9 @@ def test_get_ratings(db_session: Session, client: TestClient):
     auth_user, auth_token = create_test_user(db, username="auth_user_for_ratings_get", email="auth_ratings_get@example.com")
     headers = {"Authorization": f"Bearer {auth_token}"}
 
-    # Now make the API call to get all ratings with authentication
-    response = client.get("/ratings/", headers=headers) # Provide auth headers
+    # The /ratings/ endpoint is likely handled by the main app, not specific to /users.
+    # So, /ratings/ should be correct for getting all ratings.
+    response = client.get("/ratings/", headers=headers) # This path should be correct if it's a global endpoint
     assert response.status_code == status.HTTP_200_OK
     ratings_data = response.json()
 
@@ -94,5 +99,3 @@ def test_get_ratings(db_session: Session, client: TestClient):
     # Use the stored IDs for assertions
     assert any(r["user_id"] == user1_id and r["game_id"] == game1_id for r in ratings_data)
     assert any(r["user_id"] == user2_id and r["game_id"] == game2_id for r in ratings_data)
-    # This assertion seems out of place in a get_ratings test, removed.
-    # assert content["detail"] == "User deleted successfully"

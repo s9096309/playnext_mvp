@@ -7,7 +7,7 @@ This module defines endpoints for creating, retrieving, updating, and deleting
 user accounts, as well as accessing a user's personal backlog, ratings, and recommendations.
 """
 
-import datetime # Standard library import
+import datetime
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -16,8 +16,10 @@ from sqlalchemy.orm import Session
 from app.database import models, schemas
 from app.database.session import get_db
 from app.database import user_crud
+from app.database import crud
 from app.utils.auth import get_current_user
-from app.utils.security import hash_password # Corrected import: Use hash_password
+from app.utils.security import hash_password
+from starlette import status
 
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -54,7 +56,6 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
             detail="Email already registered"
         )
 
-    # Use the correct function name: hash_password
     hashed_password = hash_password(user.password)
 
     user_create_db = schemas.UserCreateDB(
@@ -63,8 +64,8 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
         password_hash=hashed_password,
         registration_date=datetime.datetime.now(datetime.UTC),
         user_age=user.user_age,
-        is_admin=user.is_admin, # Keep this from UserCreate or explicitly set it
-        igdb_id=user.igdb_id # Pass igdb_id from UserCreate
+        is_admin=user.is_admin,
+        igdb_id=user.igdb_id
     )
     return user_crud.create_user(db=db, user=user_create_db)
 
@@ -153,7 +154,7 @@ def read_users(
 @router.put("/{user_id}", response_model=schemas.User)
 def update_user(
     user_id: int,
-    user_update: schemas.UserUpdate, # Renamed parameter for clarity
+    user_update: schemas.UserUpdate,
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -265,6 +266,58 @@ def delete_current_user(
     return current_user
 
 
+@router.post("/me/ratings/", response_model=schemas.Rating)
+def create_my_rating(
+    rating: schemas.RatingCreateMe,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Allows the current authenticated user to submit a new rating for a game.
+
+    Args:
+        rating (schemas.RatingCreateMe): The rating data (game_id, rating, comment).
+        current_user (models.User): The authenticated user.
+        db (Session): The database session.
+
+    Returns:
+        schemas.Rating: The created rating record.
+
+    Raises:
+        HTTPException: If the game is not found or if the user has already rated this game.
+    """
+    # Check if the game exists
+    game = crud.get_game(db, game_id=rating.game_id)
+    if not game:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Game not found"
+        )
+
+    # Check if the user has already rated this game to prevent duplicates
+    existing_rating = user_crud.get_rating_by_user_and_game(
+        db,
+        user_id=current_user.user_id,
+        game_id=rating.game_id
+    )
+    if existing_rating:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, # 409 Conflict for duplicate resource
+            detail="You have already rated this game. Consider updating your existing rating."
+        )
+
+    # Create the full RatingCreate schema for the CRUD operation
+    rating_data = schemas.RatingCreate(
+        user_id=current_user.user_id,
+        game_id=rating.game_id,
+        rating=rating.rating,
+        comment=rating.comment,
+        rating_date=rating.rating_date if rating.rating_date else datetime.datetime.now(datetime.UTC)
+    )
+
+    return crud.create_rating(db=db, rating=rating_data)
+
+
 @router.get("/me/backlog", response_model=List[schemas.BacklogItem])
 def read_users_me_backlog(
     current_user: models.User = Depends(get_current_user),
@@ -303,7 +356,7 @@ def read_users_me_ratings(
     return ratings
 
 
-@router.get("/me/recommendations", response_model=List[schemas.Game]) # Changed response_model to List[schemas.Game]
+@router.get("/me/recommendations", response_model=schemas.RecommendationResponse)
 async def read_users_me_recommendations(
     current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -316,7 +369,22 @@ async def read_users_me_recommendations(
         db (Session): The database session.
 
     Returns:
-        List[schemas.Game]: A list of recommended game objects for the user.
+        schemas.RecommendationResponse: An object containing recommendations for the user.
     """
-    # Directly call user_crud.get_user_recommendations as it exists in user_crud.py
-    return user_crud.get_user_recommendations(db=db, user_id=current_user.user_id)
+    recommended_games = user_crud.get_user_recommendations(db=db, user_id=current_user.user_id)
+
+    structured_recommendations = []
+    for game in recommended_games:
+        structured_recommendations.append(
+            schemas.StructuredRecommendation(
+                game_name=game.game_name,
+                genre=game.genre,
+                igdb_link=f"https://www.igdb.com/games/{game.igdb_id}" if game.igdb_id else "N/A",
+                reasoning="Based on your preferred genres and ratings."
+            )
+        )
+
+    return schemas.RecommendationResponse(
+        structured_recommendations=structured_recommendations,
+        gemini_response="Recommendations generated successfully."
+    )

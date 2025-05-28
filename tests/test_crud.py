@@ -1,7 +1,7 @@
 # tests/test_crud.py
 import pytest
 from sqlalchemy.orm import Session
-from datetime import datetime, date, UTC
+from datetime import datetime, date, UTC # Ensure UTC is imported
 import uuid
 
 from app.database import crud
@@ -254,6 +254,7 @@ def test_create_backlog_item(db_session: Session):
         user_id=user.user_id,
         game_id=game.game_id,
         status=schemas.BacklogStatus.PLAYING
+        # Removed: rating, hours_played, start_date, completion_date, notes
     )
     db_backlog_item = crud.create_backlog_item(db=db, backlog_item=backlog_item_data)
     assert db_backlog_item.backlog_id is not None
@@ -265,7 +266,8 @@ def test_get_backlog_item(db_session: Session):
     db = db_session
     user, _ = create_test_user(db, username="get_backlog_user", email="get_backlog@example.com")
     game = create_test_game(db, game_name="Get Backlog Game")
-    backlog_item_data = schemas.BacklogItemCreate(user_id=user.user_id, game_id=game.game_id, status=schemas.BacklogStatus.COMPLETED) # Pass the enum member directly
+    # Pass the enum member directly, and remove extra fields
+    backlog_item_data = schemas.BacklogItemCreate(user_id=user.user_id, game_id=game.game_id, status=schemas.BacklogStatus.COMPLETED)
     db_backlog_item = crud.create_backlog_item(db=db, backlog_item=backlog_item_data)
     retrieved_item = crud.get_backlog_item(db, backlog_id=db_backlog_item.backlog_id)
     assert retrieved_item is not None
@@ -277,8 +279,9 @@ def test_get_user_backlog(db_session: Session):
     user, _ = create_test_user(db, username="user_for_backlog", email="user_for_backlog@example.com")
     game1 = create_test_game(db, game_name="User Backlog Game 1")
     game2 = create_test_game(db, game_name="User Backlog Game 2")
-    crud.create_backlog_item(db=db, backlog_item=schemas.BacklogItemCreate(user_id=user.user_id, game_id=game1.game_id, status=schemas.BacklogStatus.PLAYING)) # Pass the enum member
-    crud.create_backlog_item(db=db, backlog_item=schemas.BacklogItemCreate(user_id=user.user_id, game_id=game2.game_id, status=schemas.BacklogStatus.DROPPED)) # Pass the enum member
+    # Pass the enum member directly, and remove extra fields
+    crud.create_backlog_item(db=db, backlog_item=schemas.BacklogItemCreate(user_id=user.user_id, game_id=game1.game_id, status=schemas.BacklogStatus.PLAYING))
+    crud.create_backlog_item(db=db, backlog_item=schemas.BacklogItemCreate(user_id=user.user_id, game_id=game2.game_id, status=schemas.BacklogStatus.DROPPED))
     backlog_items = user_crud.get_user_backlog(db, user_id=user.user_id)
     assert len(backlog_items) == 2
     assert all(item.user_id == user.user_id for item in backlog_items)
@@ -290,18 +293,22 @@ def test_update_backlog_item(db_session: Session):
     db = db_session
     user, _ = create_test_user(db, username="update_backlog_user", email="update_backlog@example.com")
     game = create_test_game(db, game_name="Update Backlog Game")
-    backlog_item_data = schemas.BacklogItemCreate(user_id=user.user_id, game_id=game.game_id, status=schemas.BacklogStatus.PLAYING) # Pass the enum member
+    # Pass the enum member directly, and remove extra fields
+    backlog_item_data = schemas.BacklogItemCreate(user_id=user.user_id, game_id=game.game_id, status=schemas.BacklogStatus.PLAYING)
     db_backlog_item = crud.create_backlog_item(db=db, backlog_item=backlog_item_data)
-    update_data = schemas.BacklogItemUpdate(status=schemas.BacklogStatus.COMPLETED, rating=4.0) # Pass the enum member
+    # Remove 'rating' from update_data, as it's no longer in the BacklogItemUpdate schema
+    update_data = schemas.BacklogItemUpdate(status=schemas.BacklogStatus.COMPLETED)
     updated_item = crud.update_backlog_item(db=db, backlog_id=db_backlog_item.backlog_id, backlog_item_update=update_data)
     assert updated_item.status == schemas.BacklogStatus.COMPLETED
-    assert updated_item.rating == 4.0
+    # Removed assertion for rating, as it's no longer part of the BacklogItem model
+    # assert updated_item.rating == 4.0
 
 def test_delete_backlog_item(db_session: Session):
     db = db_session
     user, _ = create_test_user(db, username="user_delete_backlog", email="delete_backlog@example.com")
     game = create_test_game(db, game_name="Game to Delete from Backlog")
-    backlog_item_data = schemas.BacklogItemCreate(user_id=user.user_id, game_id=game.game_id, status=schemas.BacklogStatus.PLAYING) # Pass the enum member
+    # Pass the enum member directly, and remove extra fields
+    backlog_item_data = schemas.BacklogItemCreate(user_id=user.user_id, game_id=game.game_id, status=schemas.BacklogStatus.PLAYING)
     db_backlog_item = crud.create_backlog_item(db=db, backlog_item=backlog_item_data)
     deleted_item = crud.delete_backlog_item(db, backlog_id=db_backlog_item.backlog_id)
     assert deleted_item is not None
@@ -319,21 +326,24 @@ def test_create_recommendation(db_session: Session):
         game_id=game.game_id,
         timestamp=datetime.now(UTC),
         recommendation_reason="Similar genre",
-        documentation_rating=5.0
+        documentation_rating=5.0 # Added this required field
     )
     db_reco = crud.create_recommendation(db=db, recommendation=reco_data)
     assert db_reco.recommendation_id is not None
     assert db_reco.recommendation_reason == "Similar genre"
+    assert db_reco.documentation_rating == 5.0 # Add assertion for the new field
 
 def test_get_recommendation(db_session: Session):
     db = db_session
     user, _ = create_test_user(db, username="get_reco_user", email="get_reco@example.com")
     game = create_test_game(db, game_name="Get Reco Game")
-    reco_data = schemas.RecommendationCreate(user_id=user.user_id, game_id=game.game_id, timestamp=datetime.now(UTC), recommendation_reason="Based on rating")
+    # Added documentation_rating
+    reco_data = schemas.RecommendationCreate(user_id=user.user_id, game_id=game.game_id, timestamp=datetime.now(UTC), recommendation_reason="Based on rating", documentation_rating=3.0)
     db_reco = crud.create_recommendation(db=db, recommendation=reco_data)
     retrieved_reco = crud.get_recommendation(db, recommendation_id=db_reco.recommendation_id)
     assert retrieved_reco is not None
     assert retrieved_reco.user_id == user.user_id
+    assert retrieved_reco.documentation_rating == 3.0 # Add assertion
 
 def test_get_recommendations(db_session: Session):
     db = db_session
@@ -341,16 +351,21 @@ def test_get_recommendations(db_session: Session):
     user2, _ = create_test_user(db, username="list_reco_user2", email="list_reco2@example.com")
     game1 = create_test_game(db, game_name="List Reco Game 1")
     game2 = create_test_game(db, game_name="List Reco Game 2")
-    crud.create_recommendation(db=db, recommendation=schemas.RecommendationCreate(user_id=user1.user_id, game_id=game1.game_id, timestamp=datetime.now(UTC), recommendation_reason="Reason 1"))
-    crud.create_recommendation(db=db, recommendation=schemas.RecommendationCreate(user_id=user2.user_id, game_id=game2.game_id, timestamp=datetime.now(UTC), recommendation_reason="Reason 2"))
+    # Added documentation_rating to both
+    crud.create_recommendation(db=db, recommendation=schemas.RecommendationCreate(user_id=user1.user_id, game_id=game1.game_id, timestamp=datetime.now(UTC), recommendation_reason="Reason 1", documentation_rating=4.0))
+    crud.create_recommendation(db=db, recommendation=schemas.RecommendationCreate(user_id=user2.user_id, game_id=game2.game_id, timestamp=datetime.now(UTC), recommendation_reason="Reason 2", documentation_rating=5.0))
     recommendations = crud.get_recommendations(db)
     assert len(recommendations) >= 2
+    # Optional: More specific assertions for the contents of recommendations
+    assert any(r.user_id == user1.user_id and r.documentation_rating == 4.0 for r in recommendations)
+    assert any(r.user_id == user2.user_id and r.documentation_rating == 5.0 for r in recommendations)
 
 def test_update_recommendation(db_session: Session):
     db = db_session
     user, _ = create_test_user(db, username="upd_reco_user", email="upd_reco@example.com")
     game = create_test_game(db, game_name="Upd Reco Game")
-    reco_data = schemas.RecommendationCreate(user_id=user.user_id, game_id=game.game_id, timestamp=datetime.now(UTC), recommendation_reason="Old Reason")
+    # Added documentation_rating
+    reco_data = schemas.RecommendationCreate(user_id=user.user_id, game_id=game.game_id, timestamp=datetime.now(UTC), recommendation_reason="Old Reason", documentation_rating=2.5)
     db_reco = crud.create_recommendation(db=db, recommendation=reco_data)
     update_data = schemas.RecommendationUpdate(recommendation_reason="New Reason", documentation_rating=4.5)
     updated_reco = crud.update_recommendation(db=db, recommendation_id=db_reco.recommendation_id, recommendation_update=update_data)
@@ -361,7 +376,8 @@ def test_delete_recommendation(db_session: Session):
     db = db_session
     user, _ = create_test_user(db, username="del_reco_user", email="del_reco@example.com")
     game = create_test_game(db, game_name="Del Reco Game")
-    reco_data = schemas.RecommendationCreate(user_id=user.user_id, game_id=game.game_id, timestamp=datetime.now(UTC), recommendation_reason="To Delete")
+    # Added documentation_rating
+    reco_data = schemas.RecommendationCreate(user_id=user.user_id, game_id=game.game_id, timestamp=datetime.now(UTC), recommendation_reason="To Delete", documentation_rating=1.5)
     db_reco = crud.create_recommendation(db=db, recommendation=reco_data)
     deleted_reco = crud.delete_recommendation(db, recommendation_id=db_reco.recommendation_id)
     assert deleted_reco is not None
@@ -382,9 +398,9 @@ def test_get_user_recommendations(db_session: Session):
         user_id=user.user_id, game_id=game1.game_id, rating=5, comment="Loved it!", rating_date=datetime.now(UTC)
     ))
 
-    # Add a backlog item for the user
+    # Add a backlog item for the user (Removed extra fields as per schema)
     crud.create_backlog_item(db=db, backlog_item=schemas.BacklogItemCreate(
-        user_id=user.user_id, game_id=game2.game_id, status=schemas.BacklogStatus.PLAYING # Pass the enum member directly
+        user_id=user.user_id, game_id=game2.game_id, status=schemas.BacklogStatus.PLAYING
     ))
 
     # Get recommendations (this will now call user_crud.get_user_recommendations)
@@ -397,6 +413,8 @@ def test_get_user_recommendations(db_session: Session):
     recommended_game_ids = {g.game_id for g in recommendations}
     assert game1.game_id not in recommended_game_ids
     assert game2.game_id not in recommended_game_ids
+    # The following assertion is more about the logic of your recommendation system
+    # and less about CRUD, so keeping it flexible.
     if game3.game_id in recommended_game_ids:
         assert True # Game3 (RPG) might be recommended if Game1 (RPG) was highly rated
     else:
