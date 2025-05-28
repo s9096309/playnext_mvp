@@ -3,7 +3,7 @@
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
-from app.main import app # Import your FastAPI app
+from app.main import app
 from fastapi.testclient import TestClient
 from app.database.models import Base
 from app.database.session import get_db
@@ -34,7 +34,7 @@ def db_session_fixture():
         transaction.rollback() # Rollback all changes made by the test
         db.close() # Close the session
         connection.close() # Close the connection
-        Base.metadata.drop_all(bind=engine) # Drop tables to ensure a completely clean slate (good practice even for in-memory)
+        Base.metadata.drop_all(bind=engine) # Drop tables to ensure a completely clean slate
 
 
 @pytest.fixture(name="client")

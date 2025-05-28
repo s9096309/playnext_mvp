@@ -1,10 +1,9 @@
 # app/database/user_crud.py
 from sqlalchemy.orm import Session
-from sqlalchemy import desc, asc # Needed for sorting in recommendations
+from sqlalchemy import desc, asc
 from typing import List, Optional
 from datetime import datetime, UTC # Import UTC for the deprecation fix
-
-from . import models, schemas # Assuming models and schemas are in the same parent directory
+from . import models, schemas
 
 
 def get_user(db: Session, user_id: int):
@@ -26,8 +25,8 @@ def create_user(db: Session, user: schemas.UserCreateDB):
         email=user.email,
         password_hash=user.password_hash,
         user_age=user.user_age,
-        is_admin=user.is_admin, # <-- CRUCIAL FIX: Use the is_admin from the user object!
-        registration_date=user.registration_date # Also ensure this uses the one from user object
+        is_admin=user.is_admin,
+        registration_date=user.registration_date
     )
     db.add(db_user)
     db.commit()
@@ -38,7 +37,7 @@ def get_users(db: Session, skip: int = 0, limit: int = 100):
     """Retrieves a list of all users."""
     return db.query(models.User).offset(skip).limit(limit).all()
 
-from app.utils.auth import get_password_hash # You'll need this for password updates
+from app.utils.auth import get_password_hash
 
 def update_user(db: Session, user_id: int, user_update: schemas.UserUpdate) -> models.User:
     db_user = db.query(models.User).filter(models.User.user_id == user_id).first()

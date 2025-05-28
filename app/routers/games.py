@@ -58,7 +58,6 @@ def create_game(title: str = Query(..., description="Game title"), db: Session =
         igdb_id=igdb_id,
         image_url=image_url,
         age_rating=age_rating,
-        user_id = current_user.user_id #add user ID to created game.
     )
 
     return crud.create_game(db=db, game=game_data)
@@ -139,7 +138,6 @@ def search_games(query: str, db: Session = Depends(get_db)):
             igdb_id=igdb_game.get('id', 0),
             image_url=image_url,
             age_rating=age_rating,
-            user_id=None  # User ID is not relevant for searched games
         )
 
         # Store the IGDB game in the database if it doesn't exist

@@ -98,6 +98,11 @@ def update_game(db: Session, game_id: int, game_update: schemas.GameUpdate) -> O
     db.refresh(db_game)
     return db_game
 
+def get_game_ratings(db: Session, game_id: int) -> List[models.Rating]:
+    """Retrieves all ratings for a specific game."""
+    return db.query(models.Rating).filter(models.Rating.game_id == game_id).all()
+
+
 
 def delete_game(db: Session, game_id: int) -> Optional[models.Game]:
     db_game = db.query(models.Game).filter(models.Game.game_id == game_id).first()

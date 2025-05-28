@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.database import models, schemas
 from app.database.session import get_db
-from app.database import user_crud # This is correct, all user CRUD here
+from app.database import user_crud
 from app.routers import recommendations # Assuming this is for other non-user-specific recommendations
 from app.utils.auth import get_current_user, get_password_hash
 from datetime import datetime, UTC
@@ -18,7 +18,6 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     if db_user:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
 
-    # This is the crucial part that was likely missed or reverted
     hashed_password = get_password_hash(user.password)
 
     user_create_db = schemas.UserCreateDB(
@@ -36,7 +35,7 @@ def read_current_user(current_user: models.User = Depends(get_current_user)):
 
 @router.get("/{user_id}", response_model=schemas.User)
 def read_user(user_id: int, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
-    db_user = user_crud.get_user(db, user_id=user_id) # Correctly calls user_crud
+    db_user = user_crud.get_user(db, user_id=user_id)
     if db_user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     return db_user
@@ -48,7 +47,7 @@ def read_users(skip: int = 0, limit: int = 100, current_user: models.User = Depe
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to read all users."
         )
-    users = user_crud.get_users(db, skip=skip, limit=limit) # Correctly calls user_crud
+    users = user_crud.get_users(db, skip=skip, limit=limit)
     return users
 
 @router.put("/{user_id}", response_model=schemas.User)
@@ -60,7 +59,7 @@ def update_user(user_id: int, user: schemas.UserUpdate, current_user: models.Use
     if user_id != current_user.user_id and not current_user.is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to update this user")
 
-    db_user = user_crud.update_user(db, user_id=user_id, user_update=user) # Correctly calls user_crud
+    db_user = user_crud.update_user(db, user_id=user_id, user_update=user)
     if db_user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     return db_user
@@ -73,7 +72,7 @@ def delete_user(user_id: int, current_user: models.User = Depends(get_current_us
     if user_id != current_user.user_id and not current_user.is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to delete this user")
 
-    db_user = user_crud.delete_user(db, user_id=user_id) # Correctly calls user_crud
+    db_user = user_crud.delete_user(db, user_id=user_id)
     if db_user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     return db_user
@@ -85,7 +84,7 @@ def update_current_user(user_update: schemas.UserUpdate, current_user: models.Us
 @router.delete("/me", response_model=schemas.User)
 def delete_current_user(current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     user_crud.delete_user(db, user_id=current_user.user_id)
-    return current_user # Still consider if returning current_user is appropriate after deletion.
+    return current_user
 
 
 @router.get("/me/backlog", response_model=list[schemas.BacklogItem])
@@ -111,5 +110,4 @@ async def read_users_me_recommendations(current_user: models.User = Depends(get_
     Get the recommendations for the currently authenticated user.
     """
     user_request = schemas.UserRequest(user_id=current_user.user_id)
-    # Changed to direct call to user_crud.get_user_recommendations, removed await assuming it's not async
     return user_crud.get_user_recommendations(db=db, user_id=user_request.user_id)

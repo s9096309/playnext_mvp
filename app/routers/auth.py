@@ -7,7 +7,7 @@ from ..database.session import get_db
 from ..utils.auth import create_access_token
 from datetime import timedelta
 
-ACCESS_TOKEN_EXPIRE_MINUTES = 30  # Define the constant here
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 router = APIRouter()
 
