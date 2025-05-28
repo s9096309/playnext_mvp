@@ -183,3 +183,4 @@ class RecommendationResponse(BaseModel):
 
 class UserRequest(BaseModel):
     user_id: int
+

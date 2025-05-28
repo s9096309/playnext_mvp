@@ -144,3 +144,4 @@ def map_igdb_age_rating(igdb_rating: int) -> str | None:
                     or None if the ID is not found in the map.
     """
     return IGDB_AGE_RATING_MAP.get(igdb_rating)
+

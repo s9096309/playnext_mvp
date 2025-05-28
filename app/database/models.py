@@ -97,3 +97,4 @@ class Rating(Base):
 
     user = relationship("User", back_populates="ratings")
     game = relationship("Game", back_populates="ratings")
+

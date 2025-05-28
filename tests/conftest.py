@@ -51,4 +51,5 @@ def client_fixture(db_session: Session):
     with TestClient(app) as test_client:
         yield test_client
     # Clean up the dependency override after the test
-    app.dependency_overrides.clear() # Clears all overrides, which is usually safe for tests
+    app.dependency_overrides.clear() # Clears all overrides
+
