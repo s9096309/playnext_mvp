@@ -5,15 +5,13 @@ import os
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
-from sqlalchemy.engine import Engine # Import Engine type hint
+from sqlalchemy.engine import Engine
 from dotenv import load_dotenv
 
 from app.database.models import Base
 
 load_dotenv()
 
-# We will store the initialized engine and SessionLocal here
-# but they will be None initially
 _engine: Engine = None
 _SessionLocal: sessionmaker = None
 
@@ -27,7 +25,13 @@ def get_engine() -> Engine:
         database_url = os.getenv("DATABASE_URL")
         if not database_url:
             raise ValueError("DATABASE_URL not found in .env file or environment.")
-        _engine = create_engine(database_url, connect_args={"check_same_thread": False})
+
+        connect_args = {}
+        # Apply check_same_thread=False only for SQLite databases
+        if database_url.startswith("sqlite:///"):
+            connect_args["check_same_thread"] = False
+
+        _engine = create_engine(database_url, connect_args=connect_args)
     return _engine
 
 def get_session_local_factory() -> sessionmaker:
@@ -57,7 +61,6 @@ def get_db() -> Generator[Session, None, None]:
     Yields:
         sqlalchemy.orm.Session: A database session.
     """
-    # Call the factory to get a new session instance
     db = get_session_local_factory()()
     try:
         yield db
