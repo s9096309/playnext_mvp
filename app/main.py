@@ -26,3 +26,4 @@ app.include_router(recommendations.router)
 app.include_router(backlog_items.router)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
