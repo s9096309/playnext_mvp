@@ -26,8 +26,8 @@ def create_user(db: Session, user: schemas.UserCreateDB):
         email=user.email,
         password_hash=user.password_hash,
         user_age=user.user_age,
-        is_admin=user.is_admin, # Use the is_admin from the user object
-        registration_date=user.registration_date # Use the registration_date from the user object
+        is_admin=user.is_admin, # <-- CRUCIAL FIX: Use the is_admin from the user object!
+        registration_date=user.registration_date # Also ensure this uses the one from user object
     )
     db.add(db_user)
     db.commit()
