@@ -2,7 +2,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 import os
 from dotenv import load_dotenv
-from app.database.models import Base, User, Game, BacklogItem, Recommendation, Rating # Import all models
+from app.database.models import Base, User, Game, BacklogItem, Recommendation, Rating
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
