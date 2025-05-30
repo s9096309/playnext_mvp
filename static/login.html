@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - PlayNext</title>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/playnext_mvp/static/style.css">
+    </head>
+<body>
+    <div class="auth-container">
+        <h2>Login to Your Account</h2>
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="username">Username:</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <div class="form-group">
+                <button type="submit">Login</button>
+            </div>
+            <div id="loginMessage" class="message"></div>
+        </form>
+        <div class="form-footer">
+            Don't have an account? <a href="/playnext_mvp/static/register.html">Register here</a>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://127.0.0.1:8000';
+        const loginForm = document.getElementById('loginForm');
+        const loginMessage = document.getElementById('loginMessage');
+
+        function showMessage(element, message, type = 'success') {
+            element.textContent = message;
+            element.className = 'message'; // Reset classes
+            element.classList.add(type);
+            element.style.display = 'block';
+            setTimeout(() => {
+                element.style.display = 'none';
+            }, 5000); // Hide after 5 seconds
+        }
+
+        loginForm.addEventListener('submit', async (event) => {
+            event.preventDefault(); // Prevent default form submission
+
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+
+            if (!username || !password) {
+                showMessage(loginMessage, "Please enter both username and password.", "error");
+                return;
+            }
+
+            // Note: For /auth/token, the body needs to be FormData, not JSON.
+            const formData = new URLSearchParams();
+            formData.append('username', username);
+            formData.append('password', password);
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/token`, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/x-www-form-urlencoded' // Crucial for /auth/token
+                    },
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    showMessage(loginMessage, `Login failed: ${errorData.detail || response.statusText}`, "error");
+                    return;
+                }
+
+                const tokenData = await response.json();
+                const accessToken = tokenData.access_token;
+
+                // Store the token in localStorage
+                localStorage.setItem('accessToken', accessToken);
+                showMessage(loginMessage, "Login successful! Redirecting...", "success");
+
+                // Clear the form and redirect to the main page or a user dashboard
+                loginForm.reset();
+                setTimeout(() => {
+                    window.location.href = '/playnext_mvp/static/index.html';
+                }, 2000); // Redirect after 2 seconds
+
+            } catch (error) {
+                console.error('Error during login:', error);
+                showMessage(loginMessage, `An unexpected error occurred: ${error.message}`, "error");
+            }
+        });
+    </script>
+</body>
+</html>
