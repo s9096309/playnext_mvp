@@ -34,7 +34,7 @@ def _process_igdb_game_data(igdb_game: dict) -> schemas.GameCreate:
             # Standardize image size for consistency
             image_url = cover_data.replace("t_thumb", "t_cover_big")
 
-    age_rating: Optional[int] = None
+    age_rating: Optional[str] = None
     if 'age_ratings' in igdb_game and igdb_game['age_ratings']:
         # igdb_age_ratings is a list of objects, each with a 'rating' key
         mapped_ratings = [igdb_utils.map_igdb_age_rating(rating['rating'])
@@ -124,11 +124,12 @@ def read_games(
     sort_by: Optional[str] = Query(None, description="Sort games by 'game_name', 'release_date', or 'age_rating'"),
     genre: Optional[str] = Query(None, description="Filter games by genre"),
     platform: Optional[str] = Query(None, description="Filter games by platform"),
-    db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user) # pylint: disable=W0613
+    db: Session = Depends(get_db)
+    # REMOVED: current_user: models.User = Depends(get_current_user)
 ):
     """
     Retrieves a list of games with optional filtering and pagination.
+    This endpoint is publicly accessible.
 
     Args:
         skip (int): The number of records to skip (for pagination).
@@ -137,7 +138,6 @@ def read_games(
         genre (Optional[str]): Filter games by a specific genre.
         platform (Optional[str]): Filter games by a specific platform.
         db (Session): The database session.
-        current_user (models.User): The authenticated user (used for dependency, not direct authorization here).
 
     Returns:
         List[schemas.Game]: A list of game objects.
@@ -148,7 +148,6 @@ def read_games(
         if game.image_url is None:
             game.image_url = ""
     return games
-
 
 @router.put("/{game_id}", response_model=schemas.Game)
 def update_game(
