@@ -81,7 +81,7 @@ class GameBase(BaseModel):
     platform: str
     igdb_id: int
     image_url: Optional[str] = None
-    age_rating: Optional[int] = Field(None, ge=0, description="Game age rating (e.g., PEGI, ESRB equivalent)")
+    age_rating: Optional[str] = Field(None, description="Game age rating (e.g., PEGI, ESRB equivalent)")
 
     class Config:
         from_attributes = True
@@ -99,7 +99,7 @@ class GameUpdate(BaseModel):
     release_date: Optional[datetime.date] = None
     platform: Optional[str] = None
     image_url: Optional[str] = None
-    age_rating: Optional[int] = Field(None, ge=0, description="Updated age rating")
+    age_rating: Optional[str] = Field(None, description="Game age rating (e.g., PEGI, ESRB equivalent)")
 
     class Config:
         from_attributes = True
