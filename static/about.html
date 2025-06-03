@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About - PlayNext</title>
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/playnext_mvp/static/style.css">
+</head>
+<body>
+    <header>
+        <div class="logo-container">
+            <img src="/playnext_mvp/static/playnext-logo.jpg" alt="PlayNext Logo" class="logo">
+            <h1>PlayNext</h1>
+        </div>
+        <nav>
+            <ul>
+                <li><a href="/playnext_mvp/static/index.html">Home</a></li>
+                <li><a href="/playnext_mvp/static/ratings.html">Ratings</a></li>
+                <li><a href="/playnext_mvp/static/about.html">About</a></li>
+                <li><a href="/playnext_mvp/static/backlog.html">Backlog</a></li>
+                <li><span id="welcomeMessage" class="welcome-message" style="display: none;"></span></li>
+                <li><a href="/playnext_mvp/static/login.html" id="loginLink">Login</a></li>
+                <li><a href="/playnext_mvp/static/register.html" id="registerLink">Register</a></li>
+                <li><button id="logoutButton" style="display: none;">Logout</button></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <h2>About PlayNext</h2>
+        <p>
+            PlayNext is your personal game library and discovery platform. Track your collection,
+            manage your backlog, and discover new games based on your preferences.
+        </p>
+        <p>
+            This application was built to demonstrate a modern web stack using FastAPI for the backend
+            and pure HTML, CSS, and JavaScript for the frontend.
+        </p>
+        </main>
+
+    <script>
+        const API_BASE_URL = 'http://127.0.0.1:8000';
+        const logoutButton = document.getElementById('logoutButton');
+        const loginLink = document.getElementById('loginLink');
+        const registerLink = document.getElementById('registerLink');
+        const welcomeMessage = document.getElementById('welcomeMessage');
+        const addGameMessage = document.getElementById('addGameMessage'); // Included for showMessage function
+
+        function showMessage(element, message, type = 'success') {
+            if (element) {
+                element.textContent = message;
+                element.className = 'message';
+                element.classList.add(type);
+                element.style.display = 'block';
+                setTimeout(() => {
+                    element.style.display = 'none';
+                }, 5000);
+            }
+        }
+
+        function getAccessToken() {
+            return localStorage.getItem('accessToken');
+        }
+
+        function checkLoginStatus() {
+            const token = getAccessToken();
+            if (token) {
+                try {
+                    const base64Url = token.split('.')[1];
+                    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+                        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                    }).join(''));
+                    const payload = JSON.parse(jsonPayload);
+                    welcomeMessage.textContent = `Welcome, ${payload.sub}!`;
+                    welcomeMessage.style.display = 'inline';
+                    logoutButton.style.display = 'inline';
+                    loginLink.style.display = 'none';
+                    registerLink.style.display = 'none';
+                } catch (e) {
+                    console.error("Failed to decode token:", e);
+                    logout();
+                }
+            } else {
+                welcomeMessage.style.display = 'none';
+                logoutButton.style.display = 'none';
+                loginLink.style.display = 'inline';
+                registerLink.style.display = 'inline';
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('accessToken');
+            checkLoginStatus();
+            window.location.href = '/playnext_mvp/static/login.html';
+        }
+
+        logoutButton.addEventListener('click', logout);
+
+        document.addEventListener('DOMContentLoaded', checkLoginStatus);
+    </script>
+    </body>
+</html>

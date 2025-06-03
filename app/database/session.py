@@ -1,8 +1,9 @@
 # app/database/session.py
 
-from typing import Generator
+from typing import Generator, Annotated
 import os
 
+from fastapi import Depends
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.engine import Engine
@@ -66,3 +67,6 @@ def get_db() -> Generator[Session, None, None]:
         yield db
     finally:
         db.close()
+
+# Define SessionDep here, after get_db
+SessionDep = Annotated[Session, Depends(get_db)]

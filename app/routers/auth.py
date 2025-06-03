@@ -21,7 +21,7 @@ from app.utils.security import verify_password
 
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-router = APIRouter(prefix="/auth", tags=["auth"])
+router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
 @router.post("/token", response_model=schemas.Token)

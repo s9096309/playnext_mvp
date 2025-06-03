@@ -17,10 +17,10 @@ from sqlalchemy.orm import Session
 from app.database import crud, schemas, models
 from app.database.session import get_db
 from app.utils import igdb_utils
-from app.utils.auth import get_current_user # Assuming admin checks for update/delete
+from app.utils.auth import get_current_user
 
 
-router = APIRouter(prefix="/games", tags=["games"])
+router = APIRouter(prefix="/games", tags=["Games"])
 
 
 def _process_igdb_game_data(igdb_game: dict) -> schemas.GameCreate:
@@ -279,7 +279,7 @@ async def games_options(request: Request): # pylint: disable=W0613
         Response: An HTTP 200 OK response with appropriate CORS headers.
     """
     return Response(status_code=200, headers={
-        "Access-Control-Allow-Origin": "*", # Changed to allow all for development. Adjust for production.
+        "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
         "Access-Control-Allow-Headers": "Authorization, Content-Type",
     })

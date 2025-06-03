@@ -19,7 +19,7 @@ from app.utils.auth import get_current_user
 
 
 
-router = APIRouter(prefix="/backlog", tags=["backlog_items"])
+router = APIRouter(prefix="/backlog", tags=["Backlog"])
 
 
 @router.post("/", response_model=schemas.BacklogItem, status_code=status.HTTP_201_CREATED)
