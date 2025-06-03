@@ -6,8 +6,26 @@
     <title>Register - PlayNext</title>
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/playnext_mvp/static/style.css">
-    </head>
+</head>
 <body>
+    <header>
+        <div class="logo-container">
+            <img src="/playnext_mvp/static/playnext-logo.jpg" alt="PlayNext Logo" class="logo">
+            <h1>PlayNext</h1>
+        </div>
+        <nav>
+            <ul>
+                <li><a href="/playnext_mvp/static/index.html">Home</a></li>
+                <li><a href="/playnext_mvp/static/ratings.html">Ratings</a></li>
+                <li><a href="/playnext_mvp/static/about.html">About</a></li>
+                <li><a href="/playnext_mvp/static/backlog.html">Backlog</a></li>
+                <li><span id="welcomeMessage" class="welcome-message" style="display: none;"></span></li>
+                <li><a href="/playnext_mvp/static/login.html" id="loginLink">Login</a></li>
+                <li><a href="/playnext_mvp/static/register.html" id="registerLink">Register</a></li>
+                <li><button id="logoutButton" style="display: none;">Logout</button></li>
+            </ul>
+        </nav>
+    </header>
     <div class="auth-container">
         <h2>Register New Account</h2>
         <form id="registerForm">
@@ -42,15 +60,71 @@
         const registerForm = document.getElementById('registerForm');
         const registerMessage = document.getElementById('registerMessage');
 
+        // NEW: Grab header elements for common JS functions
+        const logoutButton = document.getElementById('logoutButton');
+        const loginLink = document.getElementById('loginLink');
+        const registerLink = document.getElementById('registerLink');
+        const welcomeMessage = document.getElementById('welcomeMessage');
+        // This 'addGameMessage' isn't directly used here, but is a common element for the showMessage function
+        const addGameMessage = document.getElementById('addGameMessage');
+
+        // Common helper function (copied from index.html)
         function showMessage(element, message, type = 'success') {
-            element.textContent = message;
-            element.className = 'message'; // Reset classes
-            element.classList.add(type);
-            element.style.display = 'block';
-            setTimeout(() => {
-                element.style.display = 'none';
-            }, 5000); // Hide after 5 seconds
+            if (element) { // Add a check to prevent errors if element doesn't exist on all pages
+                element.textContent = message;
+                element.className = 'message'; // Reset classes
+                element.classList.add(type);
+                element.style.display = 'block';
+                setTimeout(() => {
+                    element.style.display = 'none';
+                }, 5000); // Hide after 5 seconds
+            }
         }
+
+        // Common authentication status check (copied from index.html)
+        function getAccessToken() {
+            return localStorage.getItem('accessToken');
+        }
+
+        function checkLoginStatus() {
+            const token = getAccessToken();
+            if (token) {
+                try {
+                    const base64Url = token.split('.')[1];
+                    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+                        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                    }).join(''));
+                    const payload = JSON.parse(jsonPayload);
+                    welcomeMessage.textContent = `Welcome, ${payload.sub}!`;
+                    welcomeMessage.style.display = 'inline';
+                    logoutButton.style.display = 'inline';
+                    loginLink.style.display = 'none'; // Hide login link when logged in
+                    registerLink.style.display = 'none'; // Hide register link when logged in
+                } catch (e) {
+                    console.error("Failed to decode token:", e);
+                    logout(); // Force logout if token is invalid
+                }
+                return true;
+            } else {
+                welcomeMessage.style.display = 'none';
+                logoutButton.style.display = 'none';
+                loginLink.style.display = 'inline'; // Show login link when logged out
+                registerLink.style.display = 'inline'; // Show register link when logged out
+                return false;
+            }
+        }
+
+        // Common logout function (copied from index.html)
+        function logout() {
+            localStorage.removeItem('accessToken');
+            checkLoginStatus(); // Update UI after logout
+            window.location.href = '/playnext_mvp/static/login.html'; // Redirect to login page
+        }
+
+        // Attach logout event listener (needs to be done on every page)
+        logoutButton.addEventListener('click', logout);
+
 
         registerForm.addEventListener('submit', async (event) => {
             event.preventDefault(); // Prevent default form submission
@@ -77,6 +151,9 @@
             if (user_age) {
                 payload.user_age = parseInt(user_age);
             }
+            // These lines seem to be assigning default values directly to the payload,
+            // which might not be needed if your backend assigns defaults or handles them.
+            // Consider removing if your schema doesn't expect them from frontend.
             payload.igdb_id = 0; // Default or remove if optional in schema
             payload.is_admin = false; // Default or remove if optional in schema
 
@@ -108,6 +185,9 @@
                 showMessage(registerMessage, `An unexpected error occurred: ${error.message}`, "error");
             }
         });
+
+        // Call checkLoginStatus on page load to update header elements
+        document.addEventListener('DOMContentLoaded', checkLoginStatus);
     </script>
 </body>
 </html>

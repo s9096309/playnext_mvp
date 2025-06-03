@@ -94,7 +94,7 @@ class Rating(Base):
     rating = Column(Float)
     comment = Column(String)
     rating_date = Column(DateTime)
+    updated_at = Column(DateTime)
 
     user = relationship("User", back_populates="ratings")
     game = relationship("Game", back_populates="ratings")
-

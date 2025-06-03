@@ -25,7 +25,7 @@ load_dotenv()
 # Configure Gemini API key
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
-router = APIRouter(prefix="/recommendations", tags=["recommendations"])
+router = APIRouter(prefix="/recommendations", tags=["Recommendations"])
 
 
 async def generate_recommendations_gemini(prompt: str) -> str:
