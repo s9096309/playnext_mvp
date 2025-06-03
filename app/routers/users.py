@@ -56,6 +56,24 @@ def create_user(user: schemas.UserCreate, db: SessionDep): # Consistent with Ses
     )
     return user_crud.create_user(db=db, user=user_create_db)
 
+@router.get("/", response_model=List[schemas.User]) # This is the new endpoint
+def read_users(
+    current_user: Annotated[models.User, Depends(get_current_active_user)], # Admin check
+    db: SessionDep,
+    skip: int = 0,
+    limit: int = 100,
+):
+    """
+    Retrieves a list of all users. Accessible only by administrators.
+    """
+    if not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to view all users."
+        )
+    users = user_crud.get_users(db, skip=skip, limit=limit)
+    return users
+
 
 @router.get("/me", response_model=schemas.User)
 def read_current_user(current_user: Annotated[models.User, Depends(get_current_user)]): # Consistent with Annotated
@@ -227,6 +245,26 @@ def read_users_me_ratings(
     )
     return ratings_with_games
 
+@router.get("/me/ratings/{rating_id}", response_model=schemas.RatingResponse)
+def read_my_rating_by_id(
+    rating_id: int,
+    current_user: Annotated[models.User, Depends(get_current_active_user)],
+    db: SessionDep
+):
+    """
+    Retrieves a specific game rating submitted by the currently authenticated user.
+    """
+    db_rating = db.query(models.Rating).options(
+        selectinload(models.Rating.game) # Eager load game details
+    ).filter(models.Rating.rating_id == rating_id).first()
+
+    if not db_rating:
+        raise HTTPException(status_code=404, detail="Rating not found.")
+
+    if db_rating.user_id != current_user.user_id:
+        raise HTTPException(status_code=403, detail="Not authorized to view this rating.")
+
+    return db_rating
 
 @router.put("/me/ratings/{rating_id}", response_model=schemas.RatingResponse)
 def update_my_rating(
@@ -235,21 +273,22 @@ def update_my_rating(
         current_user: Annotated[models.User, Depends(get_current_active_user)],
         db: SessionDep
 ):
-    db_rating = db.query(models.Rating).filter(
-        models.Rating.rating_id == rating_id,
-        models.Rating.user_id == current_user.user_id
-    ).first()
+    # First, check if the rating exists by ID, regardless of owner
+    db_rating = db.query(models.Rating).filter(models.Rating.rating_id == rating_id).first()
 
     if not db_rating:
-        raise HTTPException(status_code=404, detail="Rating not found or you don't have permission to edit it.")
+        raise HTTPException(status_code=404, detail="Rating not found.")
+
+    # Then, check if the rating belongs to the current user
+    if db_rating.user_id != current_user.user_id:
+        raise HTTPException(status_code=403, detail="Not authorized to update this rating.")
 
     update_data = rating_update.model_dump(exclude_unset=True)
 
     for key, value in update_data.items():
         setattr(db_rating, key, value)
 
-    if hasattr(db_rating, 'updated_at'):
-        db_rating.updated_at = datetime.datetime.now(datetime.UTC).replace(tzinfo=None)
+    db_rating.updated_at = datetime.datetime.now(datetime.UTC).replace(tzinfo=None)
 
     db.add(db_rating)
     db.commit()
@@ -265,32 +304,33 @@ def update_my_rating(
     return db_rating_with_game
 
 
+
 @router.delete("/me/ratings/{rating_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_my_rating(
     rating_id: int,
     current_user: Annotated[models.User, Depends(get_current_active_user)],
     db: SessionDep
 ):
-    """
-    Allows the current authenticated user to delete their own rating.
-    Returns 204 No Content on successful deletion.
-    """
-    db_rating = db.query(models.Rating).filter(
-        models.Rating.rating_id == rating_id,
-        models.Rating.user_id == current_user.user_id
-    ).first()
+    # First, check if the rating exists by ID, regardless of owner
+    db_rating = db.query(models.Rating).filter(models.Rating.rating_id == rating_id).first()
 
     if not db_rating:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Rating not found or you don't have permission to delete it."
+            detail="Rating not found."
         )
 
-    # Perform the deletion
+
+    if db_rating.user_id != current_user.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to delete this rating."
+        )
+
+
     db.delete(db_rating)
     db.commit()
 
-    # Return a 204 No Content response
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

@@ -97,7 +97,7 @@ def test_read_users_not_admin(db_session: Session, client: TestClient):
     headers = {"Authorization": f"Bearer {non_admin_token}"}
     response = client.get("/users/", headers=headers)
     assert response.status_code == status.HTTP_403_FORBIDDEN
-    assert response.json() == {"detail": "Not authorized to read all users."}
+    assert response.json() == {"detail": "Not authorized to view all users."}
 
 
 def test_read_users_admin(db_session: Session, client: TestClient):

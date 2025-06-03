@@ -220,7 +220,7 @@ class RatingResponse(BaseModel):
     rating_date: datetime.datetime
     updated_at: Optional[datetime.datetime] = None
 
-    game: Optional[GameBase] = None
+    game: Optional["Game"] = None
 
     class Config:
         from_attributes = True
