@@ -1,2 +1,10 @@
-.env
 other
+alembic/versions
+alembic.ini
+__pycache__/
+*.pyc
+.pytest_cache/
+.env
+venv/
+.idea/ # For PyCharm users
+*.db
