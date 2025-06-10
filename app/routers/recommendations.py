@@ -2,7 +2,7 @@ import json
 import os
 import re
 from datetime import datetime, timedelta, timezone
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 
 import google.generativeai as genai
 from dotenv import load_dotenv
@@ -11,6 +11,8 @@ from sqlalchemy.orm import Session
 
 from app.database import crud, models, schemas, user_crud
 from app.database.session import get_db
+from app.utils import igdb_utils
+
 
 load_dotenv()
 
@@ -22,15 +24,6 @@ RECOMMENDATION_CACHE_DURATION_HOURS = 24
 
 
 async def generate_recommendations_gemini(prompt: str) -> str:
-    """
-    Generates game recommendations using the Gemini API.
-
-    Args:
-        prompt (str): The prompt string to send to the Gemini model.
-
-    Returns:
-        str: The raw text response from the Gemini model.
-    """
     model = genai.GenerativeModel('gemini-2.0-flash')
     response = model.generate_content(prompt)
     return response.text
@@ -46,30 +39,6 @@ async def get_user_recommendations(
                     "bypassing cache."
     )
 ):
-    """
-    Generates personalized game recommendations for a user.
-
-    This endpoint gathers data about a user's ratings and backlog to
-    construct a prompt for the Gemini AI model, which then provides
-    game recommendations. The response includes structured recommendations
-    and the raw Gemini output.
-
-    Args:
-        user_id (int): The ID of the user for whom to generate
-                       recommendations.
-        db (Session): The database session.
-        force_generate (bool): If True, bypasses cache and forces new
-                               generation.
-
-    Returns:
-        schemas.RecommendationResponse: An object containing structured
-                                        recommendations and the raw Gemini
-                                        response.
-
-    Raises:
-        HTTPException: If the user is not found or recommendation generation
-                       fails.
-    """
     db_user = user_crud.get_user(db, user_id)
     if not db_user:
         raise HTTPException(
@@ -81,7 +50,7 @@ async def get_user_recommendations(
         latest_cached_reco = crud.get_latest_user_recommendation(db, user_id)
         if latest_cached_reco:
             cached_timestamp_utc = (
-                latest_cached_reco.generation_timestamp.replace(tzinfo=timezone.utc)
+                latest_cached_reco.timestamp.replace(tzinfo=timezone.utc)
             )
             current_time_utc = datetime.now(timezone.utc)
 
@@ -183,8 +152,10 @@ async def get_user_recommendations(
     For each recommendation, include:
     - "name": The game's name.
     - "genre": A primary genre for the game.
-    - "igdb_link": A direct link to the game on IGDB (e.g., "https://www.igdb.com/games/game-name").
     - "reasoning": A short, clear reason why this game is recommended based on the user's preferences.
+
+    IMPORTANT: Do NOT include 'igdb_link' or 'igdb_id' in the JSON from Gemini.
+    I will fetch the IGDB link, ID, and cover URL myself using the game 'name'.
 
     Provide the recommendations in a JSON array format. Ensure the response is valid JSON and can be parsed directly.
     Example:
@@ -193,13 +164,11 @@ async def get_user_recommendations(
       {{
         "name": "Game Title 1",
         "genre": "RPG",
-        "igdb_link": "[https://www.igdb.com/games/game-title-1](https://www.igdb.com/games/game-title-1)",
         "reasoning": "Because you enjoyed similar RPGs like X and Y."
       }},
       {{
         "name": "Game Title 2",
         "genre": "Action-Adventure",
-        "igdb_link": "[https://www.igdb.com/games/game-title-2](https://www.igdb.com/games/game-title-2)",
         "reasoning": "You like open-world games and this has a similar exploration style to Z."
       }}
     ]
@@ -220,21 +189,90 @@ async def get_user_recommendations(
             if isinstance(recommendations_data, list):
                 for item in recommendations_data:
                     game_name = item.get("name") or item.get("title")
-                    genre = item.get("genre")
-                    igdb_link = item.get("igdb_link")
-                    reasoning = item.get("reasoning")
+                    genre_from_gemini = item.get("genre")
 
-                    if all([game_name, genre, igdb_link, reasoning]):
-                        structured_recommendations.append(
-                            schemas.StructuredRecommendation(
-                                game_name=game_name,
-                                genre=genre,
-                                igdb_link=igdb_link,
-                                reasoning=reasoning
+                    if game_name:
+                        igdb_search_results = igdb_utils.search_games_igdb(game_name)
+
+                        igdb_game_data = None
+                        if igdb_search_results and len(igdb_search_results) > 0:
+                            first_igdb_game = igdb_search_results[0]
+
+                            igdb_id = first_igdb_game.get("id")
+                            igdb_link = first_igdb_game.get("url")
+                            igdb_genres = [g['name']
+                                           for g in first_igdb_game.get('genres', [])]
+                            final_genre = (", ".join(igdb_genres)
+                                           if igdb_genres else genre_from_gemini)
+
+                            cover_url = None
+                            if first_igdb_game.get('cover') and \
+                                    first_igdb_game['cover'].get('url'):
+                                raw_cover_url = first_igdb_game['cover']['url']
+                                if raw_cover_url.startswith('//'):
+                                    cover_url = 'https:' + raw_cover_url
+                                else:
+                                    cover_url = raw_cover_url
+                                cover_url = cover_url.replace('t_thumb', 't_cover_big')
+
+                            if igdb_id and igdb_link:
+                                igdb_game_data = {
+                                    "igdb_id": igdb_id,
+                                    "name": first_igdb_game.get("name"),
+                                    "url": igdb_link,
+                                    "genre": final_genre,
+                                    "cover_url": cover_url
+                                }
+
+                        if igdb_game_data:
+                            reasoning = item.get("reasoning")
+                            final_game_name = igdb_game_data["name"]
+
+                            db_game = crud.get_game_by_igdb_id(
+                                db, igdb_id=igdb_game_data["igdb_id"]
                             )
-                        )
+                            if not db_game:
+                                new_game_data = schemas.GameCreate(
+                                    game_name=final_game_name,
+                                    igdb_id=igdb_game_data["igdb_id"],
+                                    genre=igdb_game_data.get("genre"),
+                                    igdb_link=igdb_game_data.get("url"),
+                                    cover_url=igdb_game_data.get("cover_url"),
+                                )
+                                db_game = crud.create_game(db, game=new_game_data)
+                                print(f"Created new game in DB: {final_game_name} "
+                                      f"(ID: {igdb_game_data['igdb_id']})")
+
+                            if db_game:
+                                structured_recommendations.append(
+                                    schemas.StructuredRecommendation(
+                                        game_name=db_game.game_name,
+                                        genre=db_game.genre,
+                                        igdb_link=db_game.igdb_link,
+                                        reasoning=reasoning
+                                    )
+                                )
+
+                                new_recommendation_entry = schemas.RecommendationCreate(
+                                    user_id=user_id,
+                                    game_id=db_game.game_id,
+                                    timestamp=datetime.now(timezone.utc),
+                                    recommendation_reason=reasoning,
+                                    documentation_rating=5.0,
+                                    raw_gemini_output=gemini_response,
+                                    structured_json_output=extracted_json_str
+                                )
+                                crud.create_recommendation(db, new_recommendation_entry)
+                                print(f"Saved recommendation for game: {db_game.game_name}")
+                            else:
+                                print("Could not find or create game for recommendation: "
+                                      f"{final_game_name}. Skipping saving to DB.")
+                        else:
+                            print(f"No IGDB data found for game '{game_name}' from "
+                                  "Gemini. Skipping this recommendation.")
                     else:
-                        print(f"Skipping incomplete recommendation: {item}")
+                        print(f"Skipping incomplete recommendation from Gemini: {item}. "
+                              "Game name missing.")
             else:
                 print("Gemini response JSON is not a list, expected a list "
                       "of recommendations.")
@@ -247,15 +285,6 @@ async def get_user_recommendations(
     except Exception as e:
         print(f"An unexpected error occurred during processing Gemini response: "
               f"{e}")
-
-    if extracted_json_str:
-        new_recommendation = schemas.RecommendationCreate(
-            user_id=user_id,
-            raw_gemini_output=gemini_response,
-            structured_json_output=extracted_json_str,
-            generation_timestamp=datetime.now(timezone.utc)
-        )
-        crud.create_recommendation(db, new_recommendation)
 
     return schemas.RecommendationResponse(
         structured_recommendations=structured_recommendations,

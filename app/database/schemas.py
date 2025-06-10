@@ -66,6 +66,7 @@ class GameBase(BaseModel):
     igdb_id: int
     image_url: Optional[str] = None
     age_rating: Optional[str] = None
+    igdb_link: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -80,6 +81,7 @@ class GameUpdate(BaseModel):
     genre: Optional[str] = None
     release_date: Optional[datetime.date] = None
     platform: Optional[str] = None
+    igdb_link: Optional[str] = None
     image_url: Optional[str] = None
     age_rating: Optional[str] = None
 
