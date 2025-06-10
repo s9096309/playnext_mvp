@@ -1,5 +1,3 @@
-# app/database/schemas.py
-
 import datetime
 import enum
 from typing import List, Optional
@@ -26,9 +24,7 @@ class UserBase(BaseModel):
 
 
 class UserCreate(UserBase):
-    password: str = Field(
-        ..., min_length=8, description="User's password (minimum 8 characters)"
-    )
+    password: str = Field(..., min_length=8)
     user_age: Optional[int] = None
 
 
@@ -44,9 +40,7 @@ class UserCreateDB(UserBase):
 class UserUpdate(BaseModel):
     username: Optional[str] = None
     email: Optional[EmailStr] = None
-    password: Optional[str] = Field(
-        None, min_length=8, description="New password (optional, minimum 8 characters)"
-    )
+    password: Optional[str] = Field(None, min_length=8)
     user_age: Optional[int] = None
     igdb_id: Optional[int] = None
     is_admin: Optional[bool] = None
@@ -64,7 +58,6 @@ class User(UserBase):
         from_attributes = True
 
 
-
 class GameBase(BaseModel):
     game_name: str
     genre: Optional[str] = None
@@ -72,13 +65,10 @@ class GameBase(BaseModel):
     platform: Optional[str] = None
     igdb_id: int
     image_url: Optional[str] = None
-    age_rating: Optional[str] = Field(
-        None, description="Game age rating (e.g., PEGI, ESRB equivalent)"
-    )
+    age_rating: Optional[str] = None
 
     class Config:
         from_attributes = True
-
 
 
 class GameCreate(GameBase):
@@ -91,9 +81,7 @@ class GameUpdate(BaseModel):
     release_date: Optional[datetime.date] = None
     platform: Optional[str] = None
     image_url: Optional[str] = None
-    age_rating: Optional[str] = Field(
-        None, description="Game age rating (e.g., PEGI, ESRB equivalent)"
-    )
+    age_rating: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -137,21 +125,29 @@ class BacklogItem(BacklogItemBase):
 
 class RecommendationBase(BaseModel):
     user_id: int
+    game_id: int
+    timestamp: datetime.datetime = Field(
+        default_factory=lambda: datetime.datetime.now(datetime.timezone.utc)
+    )
+    recommendation_reason: str
+    documentation_rating: float
+    raw_gemini_output: Optional[str] = None
+    structured_json_output: Optional[str] = None
 
     class Config:
         from_attributes = True
 
 
 class RecommendationCreate(RecommendationBase):
-    raw_gemini_output: str
-    structured_json_output: str
-    generation_timestamp: datetime.datetime = Field(default_factory=lambda: datetime.datetime.now(datetime.timezone.utc))
+    pass
 
 
 class RecommendationUpdate(BaseModel):
+    timestamp: Optional[datetime.datetime] = None
+    recommendation_reason: Optional[str] = None
+    documentation_rating: Optional[float] = None
     raw_gemini_output: Optional[str] = None
     structured_json_output: Optional[str] = None
-    generation_timestamp: Optional[datetime.datetime] = None
 
     class Config:
         from_attributes = True
@@ -159,9 +155,6 @@ class RecommendationUpdate(BaseModel):
 
 class Recommendation(RecommendationBase):
     recommendation_id: int
-    raw_gemini_output: str
-    structured_json_output: str
-    generation_timestamp: datetime.datetime
 
     class Config:
         from_attributes = True
@@ -170,9 +163,7 @@ class Recommendation(RecommendationBase):
 class RatingBase(BaseModel):
     user_id: int
     game_id: int
-    rating: float = Field(
-        ..., ge=1.0, le=10.0, description="User's rating for the game (1.0-10.0)"
-    )
+    rating: float = Field(..., ge=1.0, le=10.0)
     comment: Optional[str] = None
     rating_date: datetime.datetime
 
@@ -201,9 +192,7 @@ class Rating(RatingBase):
 
 class RatingCreateMe(BaseModel):
     game_id: int
-    rating: float = Field(
-        ..., ge=1.0, le=10.0, description="User's rating for the game (1.0-10.0)"
-    )
+    rating: float = Field(..., ge=1.0, le=10.0)
     comment: Optional[str] = None
     rating_date: Optional[datetime.datetime] = None
 
@@ -215,9 +204,7 @@ class RatingResponse(BaseModel):
     rating_id: int
     user_id: int
     game_id: int
-    rating: float = Field(
-        ..., ge=1.0, le=10.0, description="User's rating for the game (1.0-10.0)"
-    )
+    rating: float = Field(..., ge=1.0, le=10.0)
     comment: Optional[str] = None
     rating_date: datetime.datetime
     updated_at: Optional[datetime.datetime] = None
