@@ -36,6 +36,7 @@ class Game(Base):
     release_date = Column(Date)
     platform = Column(String)
     igdb_id = Column(Integer, unique=True, index=True)
+    igdb_link = Column(String, nullable=True)
     image_url = Column(String)
     age_rating = Column(String)
 

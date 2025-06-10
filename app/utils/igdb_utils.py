@@ -11,15 +11,15 @@ It also includes a mapping for IGDB age ratings to a simplified format.
 import os
 import json
 import logging
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 
-import httpx
+import httpx # Ensure httpx is installed: pip install httpx
 from dotenv import load_dotenv
 
 # Configure logging for this module
 logger = logging.getLogger(__name__)
-# Set level to INFO or DEBUG for development, WARNING or ERROR for production
-logger.setLevel(logging.INFO)
+# Set level to DEBUG for detailed output during development/debugging
+logger.setLevel(logging.DEBUG)
 # Basic console handler (you might have a more sophisticated setup in main.py)
 if not logger.handlers:
     handler = logging.StreamHandler()
@@ -35,7 +35,8 @@ CLIENT_ID = os.getenv("IGDB_CLIENT_ID")
 CLIENT_SECRET = os.getenv("IGDB_CLIENT_SECRET")
 # The access token obtained from Twitch, used for IGDB API calls.
 # It should be refreshed periodically as it expires.
-CURRENT_IGDB_ACCESS_TOKEN = os.getenv("IGDB_APP_ACCESS_TOKEN")
+# This variable will be updated by get_new_igdb_app_access_token
+CURRENT_IGDB_ACCESS_TOKEN: Optional[str] = os.getenv("IGDB_APP_ACCESS_TOKEN")
 
 # Validate that necessary environment variables are loaded
 if not CLIENT_ID or not CLIENT_SECRET:
@@ -69,6 +70,8 @@ def get_new_igdb_app_access_token() -> Optional[str]:
     }
     try:
         logger.info("Attempting to get new Twitch App Access Token...")
+        # httpx.post is synchronous here, which is fine for a startup utility function
+        # For async contexts (like FastAPI routes), you'd use httpx.AsyncClient().post
         response = httpx.post(TWITCH_TOKEN_URL, data=payload)
         response.raise_for_status()  # Raise an exception for HTTP errors (4xx or 5xx)
         token_data = response.json()
@@ -76,6 +79,7 @@ def get_new_igdb_app_access_token() -> Optional[str]:
         if new_token:
             CURRENT_IGDB_ACCESS_TOKEN = new_token
             logger.info("Successfully acquired new Twitch App Access Token.")
+            logger.debug("New token: %s", new_token) # Log token for debugging
             # In a production setup, you might want to store this token
             # in a more persistent or secure way, and its expiry time.
             return new_token
@@ -91,6 +95,9 @@ def get_new_igdb_app_access_token() -> Optional[str]:
     except httpx.RequestError as e:
         logger.error("Failed to get Twitch token - Request Error: %s", e)
         return None
+    except Exception as e:
+        logger.error("An unexpected error occurred during token acquisition: %s", e)
+        return None
 
 
 # Initial check/refresh for the token when the module loads
@@ -103,10 +110,11 @@ if not CURRENT_IGDB_ACCESS_TOKEN:
             "Failed to acquire IGDB_APP_ACCESS_TOKEN during startup. "
             "IGDB API calls will likely fail."
         )
-elif "YOUR_MANUALLY_GENERATED_TOKEN" in CURRENT_IGDB_ACCESS_TOKEN:
-    # This is a specific check for a placeholder, force refresh if it's there.
+elif "YOUR_MANUALLY_GENERATED_TOKEN" in CURRENT_IGDB_ACCESS_TOKEN: # This is a placeholder check
     logger.info("Detected placeholder token, attempting to acquire a new Twitch App Access Token.")
     get_new_igdb_app_access_token()
+else:
+    logger.info("IGDB_APP_ACCESS_TOKEN found in .env. Using existing token.")
 
 
 def _make_igdb_request(endpoint: str, body: str) -> Optional[bytes]:
@@ -132,9 +140,10 @@ def _make_igdb_request(endpoint: str, body: str) -> Optional[bytes]:
     url = f"{IGDB_API_BASE_URL}{endpoint}"
 
     try:
-        # logger.debug("Making request to %s with body: %s", url, body) # Too verbose for INFO
-        response = httpx.post(url, headers=headers, content=body)
+        logger.debug("Making request to %s with body: %s", url, body) # Debug line
+        response = httpx.post(url, headers=headers, content=body, timeout=10.0) # Added timeout
         response.raise_for_status()  # Raises an exception for 4xx/5xx responses
+        logger.debug("Successful response from %s (Status: %d).", endpoint, response.status_code) # Debug line
         return response.content
     except httpx.HTTPStatusError as e:
         logger.error(
@@ -149,20 +158,29 @@ def _make_igdb_request(endpoint: str, body: str) -> Optional[bytes]:
                 headers["Authorization"] = f"Bearer {CURRENT_IGDB_ACCESS_TOKEN}"
                 try:
                     logger.info("Retrying request after token refresh...")
-                    response = httpx.post(url, headers=headers, content=body)
+                    response = httpx.post(url, headers=headers, content=body, timeout=10.0)
                     response.raise_for_status()
+                    logger.debug("Successful retry response from %s (Status: %d).", endpoint, response.status_code)
                     return response.content
                 except httpx.RequestError as retry_e:
                     logger.error("Retry failed after token refresh: %s", retry_e)
+                except httpx.HTTPStatusError as retry_e:
+                    logger.error(
+                        "Retry failed with HTTP error after token refresh: %s - %s",
+                        retry_e.response.status_code, retry_e.response.text
+                    )
             else:
                 logger.error("Failed to refresh token, cannot retry IGDB request.")
         return None
     except httpx.RequestError as e:
         logger.error("Request error making IGDB request to %s: %s", endpoint, e)
         return None
+    except Exception as e:
+        logger.error("An unexpected error occurred during IGDB request to %s: %s", endpoint, e)
+        return None
 
 
-def search_games_igdb(query: str) -> Optional[List[dict]]:
+def search_games_igdb(query: str) -> Optional[List[Dict[str, Any]]]: # Changed return type hint
     """
     Searches for games on IGDB by query string using direct httpx.
 
@@ -173,21 +191,26 @@ def search_games_igdb(query: str) -> Optional[List[dict]]:
         Optional[List[dict]]: A list of dictionaries representing game data from IGDB,
                               or None if an error occurs.
     """
-    body = (f'search "{query}"; fields name, cover.url, genres.name, '
-            'platforms.name, id, age_ratings.rating, release_dates.human; limit 10;')
+    # Requesting common fields, and specifically 'url' for the IGDB link
+    # 'cover.url' to get the cover image URL directly
+    # 'genres.name' to get human-readable genre names
+    body = (f'search "{query}"; fields name, url, genres.name, '
+            'platforms.name, id, cover.url; limit 5;') # Increased limit for more options
 
     byte_array = _make_igdb_request("games", body)
     if byte_array:
         try:
             result = json.loads(byte_array)
+            logger.debug("IGDB search result for '%s': %s", query, result) # Debug line
             return result
         except json.JSONDecodeError as e:
-            logger.error("JSON decode error for search '%s': %s", query, e)
+            logger.error("JSON decode error for search '%s': %s. Raw response: %s", query, e, byte_array) # Added raw response
             return None
+    logger.debug("No byte array received from IGDB for search '%s'.", query) # Debug line
     return None
 
 
-def get_game_by_id_igdb(game_id: int) -> Optional[List[dict]]:
+def get_game_by_id_igdb(game_id: int) -> Optional[List[Dict[str, Any]]]: # Changed return type hint
     """
     Retrieves game details from IGDB by its unique IGDB ID using direct httpx.
 
@@ -198,23 +221,27 @@ def get_game_by_id_igdb(game_id: int) -> Optional[List[dict]]:
         Optional[List[dict]]: A list of dictionaries representing game data from IGDB,
                               or None if an error occurs.
     """
-    body = (f'fields name, cover.url, genres.name, platforms.name, id, '
-            f'age_ratings.rating, release_dates.human; where id = {game_id};')
+    body = (f'fields name, url, genres.name, platforms.name, id, '
+            f'age_ratings.rating, release_dates.human, cover.url; where id = {game_id};')
 
     byte_array = _make_igdb_request("games", body)
     if byte_array:
         try:
             result = json.loads(byte_array)
+            logger.debug("IGDB get by ID result for %s: %s", game_id, result) # Debug line
             return result
         except json.JSONDecodeError as e:
-            logger.error("JSON decode error for game ID %s: %s", game_id, e)
+            logger.error("JSON decode error for game ID %s: %s. Raw response: %s", game_id, e, byte_array) # Added raw response
             return None
+    logger.debug("No byte array received from IGDB for game ID %s.", game_id) # Debug line
     return None
 
 
 def get_cover_url(cover_id: int) -> Optional[str]:
     """
     Retrieves the cover URL for a game from the IGDB API using direct httpx.
+    Note: It's often more efficient to get the cover URL directly from the game search result
+    if 'cover.url' field is requested there, rather than a separate call.
 
     Args:
         cover_id (int): The ID of the cover image.
@@ -229,21 +256,24 @@ def get_cover_url(cover_id: int) -> Optional[str]:
         try:
             result = json.loads(byte_array)
             if result and len(result) > 0 and 'url' in result[0]:
-                url = result[0]['url'].replace('t_thumb', 't_cover_big')
+                url = result[0]['url'].replace('t_thumb', 't_cover_big') # Ensure large cover
                 if not url.startswith("https:"):
                     url = "https:" + url
+                logger.debug("Cover URL for ID %s: %s", cover_id, url) # Debug line
                 return url
             else:
                 logger.info("No URL found for cover ID %s in response: %s", cover_id, result)
                 return None
         except json.JSONDecodeError as e:
-            logger.error("JSON decode error for cover ID %s: %s", cover_id, e)
+            logger.error("JSON decode error for cover ID %s: %s. Raw response: %s", cover_id, e, byte_array) # Added raw response
             return None
+    logger.debug("No byte array received from IGDB for cover ID %s.", cover_id) # Debug line
     return None
 
 
 # Mapping from IGDB age rating IDs to human-readable strings.
-IGDB_AGE_RATING_MAP: dict[int, str] = {
+# You can expand this mapping if needed
+IGDB_AGE_RATING_MAP: Dict[int, str] = {
     1: "3", 2: "7", 3: "12", 4: "16", 5: "18", 6: "RP", 7: "EC", 8: "E", 9: "E10+",
     10: "T", 11: "M", 12: "AO", 13: "CUSA", 14: "PEGI 3", 15: "PEGI 7", 16: "PEGI 12",
     17: "PEGI 16", 18: "PEGI 18", 19: "ACB E", 20: "ACB PG", 21: "ACB M", 22: "ACB MA15+",

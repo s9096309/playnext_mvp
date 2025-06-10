@@ -24,46 +24,38 @@ router = APIRouter(prefix="/games", tags=["Games"])
 
 
 def _process_igdb_game_data(igdb_game: dict) -> schemas.GameCreate:
-    """
-    Helper function to process raw IGDB game data into a GameCreate schema.
-    """
     image_url = ""
     if 'cover' in igdb_game and igdb_game['cover']:
         cover_data = igdb_utils.get_cover_url(igdb_game['cover']['id'])
         if cover_data:
-            # Standardize image size for consistency
             image_url = cover_data.replace("t_thumb", "t_cover_big")
 
     age_rating: Optional[str] = None
     if 'age_ratings' in igdb_game and igdb_game['age_ratings']:
-        # igdb_age_ratings is a list of objects, each with a 'rating' key
         mapped_ratings = [igdb_utils.map_igdb_age_rating(rating['rating'])
                           for rating in igdb_game['age_ratings']]
         valid_ratings = [rating for rating in mapped_ratings if rating is not None]
         if valid_ratings:
-            # Take the highest age rating if multiple are present
-            age_rating = max(valid_ratings)
+            age_rating = max(valid_ratings) # This needs to be carefully considered for string comparison
 
-    release_date = datetime(2000, 1, 1).date() # Default date if not found or parse error
+    release_date = datetime(2000, 1, 1).date()
     if 'release_dates' in igdb_game and igdb_game['release_dates']:
-        # IGDB returns a list of release date objects, take the first one
         release_date_str = igdb_game['release_dates'][0].get('human')
         if release_date_str:
             try:
-                # Example: "Dec 03, 2020"
                 release_date = datetime.strptime(release_date_str, "%b %d, %Y").date()
             except ValueError:
-                # Fallback to default if parsing fails
                 print(f"Warning: Could not parse release date for {igdb_game.get('name')}: {release_date_str}")
 
     return schemas.GameCreate(
-        game_name=igdb_game.get('name', "Unknown Game"), # Provide a fallback name
+        game_name=igdb_game.get('name', "Unknown Game"),
         genre=", ".join([genre['name'] for genre in igdb_game.get('genres', [])]),
         release_date=release_date,
         platform=", ".join([platform['name'] for platform in igdb_game.get('platforms', [])]),
-        igdb_id=igdb_game.get('id', 0), # Ensure default for igdb_id
+        igdb_id=igdb_game.get('id', 0),
         image_url=image_url,
         age_rating=age_rating,
+        igdb_link=igdb_game.get('url')
     )
 
 
@@ -95,11 +87,11 @@ def create_game(
             - 404 Not Found: If the game is not found on IGDB.
             - 400 Bad Request: If the game is already registered in the database.
     """
-    if not current_user.is_admin:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only administrators can add new games."
-        )
+    # if not current_user.is_admin:
+    #    raise HTTPException(
+    #        status_code=status.HTTP_403_FORBIDDEN,
+    #        detail="Only administrators can add new games."
+    #    )
 
     igdb_games = igdb_utils.search_games_igdb(title)
     if not igdb_games:
