@@ -1,24 +1,16 @@
-# app/database/models.py
-
-"""
-SQLAlchemy models for the PlayNext database.
-
-This module defines the database schema for users, games, ratings,
-backlog items, and recommendations using SQLAlchemy's declarative base.
-"""
-from app.database.schemas import BacklogStatus
 import datetime
 import enum
-from sqlalchemy import Column, Integer, String, Float, DateTime, Date, Enum, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, String, Float, DateTime, Date, Enum, ForeignKey, Boolean, Text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
+
+from app.database.schemas import BacklogStatus
 
 
 Base = declarative_base()
 
 
 class User(Base):
-    """SQLAlchemy model for the 'users' table."""
     __tablename__ = "users"
 
     user_id = Column(Integer, primary_key=True, index=True)
@@ -36,7 +28,6 @@ class User(Base):
 
 
 class Game(Base):
-    """SQLAlchemy model for the 'games' table."""
     __tablename__ = "games"
 
     game_id = Column(Integer, primary_key=True, index=True)
@@ -52,9 +43,7 @@ class Game(Base):
     ratings = relationship("Rating", back_populates="game")
 
 
-
 class BacklogItem(Base):
-    """SQLAlchemy model for the 'backlog_items' table."""
     __tablename__ = "backlog_items"
 
     backlog_id = Column(Integer, primary_key=True, index=True)
@@ -62,29 +51,32 @@ class BacklogItem(Base):
     game_id = Column(Integer, ForeignKey("games.game_id"))
     status = Column(Enum(BacklogStatus, values_callable=lambda obj: [e.value for e in obj], native_enum=False))
     rating = Column(Float, nullable=True)
-    added_date = Column(DateTime, default=datetime.datetime.utcnow)
+    added_date = Column(DateTime, default=lambda: datetime.datetime.now(datetime.UTC))
 
     user = relationship("User", back_populates="backlog_items")
     game = relationship("Game", back_populates="backlog_items")
 
 
 class Recommendation(Base):
-    """SQLAlchemy model for the 'recommendations' table (updated for caching Gemini response)."""
     __tablename__ = "recommendations"
 
     recommendation_id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.user_id"), index=True) # Added index for faster lookups
-    generation_timestamp = Column(DateTime, default=datetime.datetime.utcnow)
+    user_id = Column(Integer, ForeignKey("users.user_id"), index=True)
 
-    # Fields to store the raw and structured JSON output from Gemini
-    raw_gemini_output = Column(String)
-    structured_json_output = Column(String)
+    game_id = Column(Integer, ForeignKey("games.game_id"), index=True, nullable=False)
+    timestamp = Column(DateTime(timezone=True), default=lambda: datetime.datetime.now(datetime.UTC), nullable=False)
+
+    recommendation_reason = Column(String, nullable=False)
+    documentation_rating = Column(Float, nullable=False)
+
+    raw_gemini_output = Column(Text, nullable=True)
+    structured_json_output = Column(Text, nullable=True)
 
     user = relationship("User", back_populates="recommendations")
+    game = relationship("Game")
 
 
 class Rating(Base):
-    """SQLAlchemy model for the 'ratings' table."""
     __tablename__ = "ratings"
 
     rating_id = Column(Integer, primary_key=True, index=True)

@@ -506,9 +506,8 @@ def get_latest_user_recommendation(db: Session, user_id: int) -> Optional[models
     """
     return db.query(models.Recommendation)\
              .filter(models.Recommendation.user_id == user_id)\
-             .order_by(models.Recommendation.generation_timestamp.desc())\
+             .order_by(models.Recommendation.timestamp.desc())\
              .first()
-
 
 def update_recommendation(
     db: Session,
