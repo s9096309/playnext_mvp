@@ -1,26 +1,23 @@
-# app/routers/users.py
-
 import datetime
-from typing import List, Optional, Annotated
+from typing import List, Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import joinedload, selectinload
-from starlette.responses import Response # Import Response from starlette.responses
+from starlette.responses import Response
 
 from app.database import models, schemas
-# get_db is no longer directly used in router functions if SessionDep is used universally
-# from app.database.session import get_db
 from app.database import user_crud
-from app.database import crud
+from app.routers.recommendations import get_user_recommendations as get_recs_from_service
+
 from app.utils.auth import get_current_user, get_current_active_user
 from app.utils.security import hash_password
-from app.database.session import SessionDep # SessionDep is crucial here
+from app.database.session import SessionDep
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
 
 @router.post("/", response_model=schemas.User)
-def create_user(user: schemas.UserCreate, db: SessionDep): # Consistent with SessionDep
+def create_user(user: schemas.UserCreate, db: SessionDep):
     """
     Registers a new user in the system.
 
@@ -42,23 +39,23 @@ def create_user(user: schemas.UserCreate, db: SessionDep): # Consistent with Ses
 
     hashed_password = hash_password(user.password)
 
-    # Ensure registration_date is naive UTC for DB storage
     registration_date_naive = datetime.datetime.now(datetime.UTC).replace(tzinfo=None)
 
     user_create_db = schemas.UserCreateDB(
         username=user.username,
         email=user.email,
         password_hash=hashed_password,
-        registration_date=registration_date_naive, # Use naive UTC
+        registration_date=registration_date_naive,
         user_age=user.user_age,
         is_admin=user.is_admin,
         igdb_id=user.igdb_id
     )
     return user_crud.create_user(db=db, user=user_create_db)
 
-@router.get("/", response_model=List[schemas.User]) # This is the new endpoint
+
+@router.get("/", response_model=List[schemas.User])
 def read_users(
-    current_user: Annotated[models.User, Depends(get_current_active_user)], # Admin check
+    current_user: Annotated[models.User, Depends(get_current_active_user)],
     db: SessionDep,
     skip: int = 0,
     limit: int = 100,
@@ -76,7 +73,7 @@ def read_users(
 
 
 @router.get("/me", response_model=schemas.User)
-def read_current_user(current_user: Annotated[models.User, Depends(get_current_user)]): # Consistent with Annotated
+def read_current_user(current_user: Annotated[models.User, Depends(get_current_user)]):
     """
     Retrieves the details of the currently authenticated user.
     """
@@ -86,8 +83,8 @@ def read_current_user(current_user: Annotated[models.User, Depends(get_current_u
 @router.get("/{user_id}", response_model=schemas.User)
 def read_user(
     user_id: int,
-    current_user: Annotated[models.User, Depends(get_current_user)], # Consistent with Annotated
-    db: SessionDep # Consistent with SessionDep
+    current_user: Annotated[models.User, Depends(get_current_user)],
+    db: SessionDep
 ):
     """
     Retrieves a user by their ID.
@@ -101,15 +98,12 @@ def read_user(
     return db_user
 
 
-db: SessionDep
-
-
 @router.put("/{user_id}", response_model=schemas.User)
 def update_user(
     user_id: int,
     user_update: schemas.UserUpdate,
-    current_user: Annotated[models.User, Depends(get_current_user)], # Consistent with Annotated
-    db: SessionDep # Consistent with SessionDep
+    current_user: Annotated[models.User, Depends(get_current_user)],
+    db: SessionDep
 ):
     """
     Updates details for an existing user.
@@ -160,8 +154,8 @@ def delete_user(
 @router.put("/me", response_model=schemas.User)
 def update_current_user(
     user_update: schemas.UserUpdate,
-    current_user: Annotated[models.User, Depends(get_current_user)], # Consistent with Annotated
-    db: SessionDep # Consistent with SessionDep
+    current_user: Annotated[models.User, Depends(get_current_user)],
+    db: SessionDep
 ):
     """
     Updates the profile of the currently authenticated user.
@@ -172,8 +166,8 @@ def update_current_user(
 
 @router.delete("/me", response_model=schemas.User)
 def delete_current_user(
-    current_user: Annotated[models.User, Depends(get_current_user)], # Consistent with Annotated
-    db: SessionDep # Consistent with SessionDep
+    current_user: Annotated[models.User, Depends(get_current_user)],
+    db: SessionDep
 ):
     """
     Deletes the account of the currently authenticated user.
@@ -188,12 +182,10 @@ def create_my_rating(
     current_user: Annotated[models.User, Depends(get_current_active_user)],
     db: SessionDep
 ):
-    # Check if game_id exists
     game = db.query(models.Game).filter(models.Game.game_id == rating_data.game_id).first()
     if not game:
         raise HTTPException(status_code=404, detail="Game not found.")
 
-    # Check for existing rating by this user for this game
     existing_rating = db.query(models.Rating).filter(
         models.Rating.user_id == current_user.user_id,
         models.Rating.game_id == rating_data.game_id
@@ -202,10 +194,8 @@ def create_my_rating(
     if existing_rating:
         raise HTTPException(status_code=409, detail="You have already rated this game. Please use the PUT method to update it.")
 
-    # Get current UTC time, then make it naive before storing in DB
     current_utc_naive = datetime.datetime.now(datetime.UTC).replace(tzinfo=None)
 
-    # Create the new rating instance
     db_rating = models.Rating(
         user_id=current_user.user_id,
         game_id=rating_data.game_id,
@@ -245,6 +235,7 @@ def read_users_me_ratings(
     )
     return ratings_with_games
 
+
 @router.get("/me/ratings/{rating_id}", response_model=schemas.RatingResponse)
 def read_my_rating_by_id(
     rating_id: int,
@@ -255,7 +246,7 @@ def read_my_rating_by_id(
     Retrieves a specific game rating submitted by the currently authenticated user.
     """
     db_rating = db.query(models.Rating).options(
-        selectinload(models.Rating.game) # Eager load game details
+        selectinload(models.Rating.game)
     ).filter(models.Rating.rating_id == rating_id).first()
 
     if not db_rating:
@@ -266,6 +257,7 @@ def read_my_rating_by_id(
 
     return db_rating
 
+
 @router.put("/me/ratings/{rating_id}", response_model=schemas.RatingResponse)
 def update_my_rating(
         rating_id: int,
@@ -273,13 +265,11 @@ def update_my_rating(
         current_user: Annotated[models.User, Depends(get_current_active_user)],
         db: SessionDep
 ):
-    # First, check if the rating exists by ID, regardless of owner
     db_rating = db.query(models.Rating).filter(models.Rating.rating_id == rating_id).first()
 
     if not db_rating:
         raise HTTPException(status_code=404, detail="Rating not found.")
 
-    # Then, check if the rating belongs to the current user
     if db_rating.user_id != current_user.user_id:
         raise HTTPException(status_code=403, detail="Not authorized to update this rating.")
 
@@ -304,14 +294,12 @@ def update_my_rating(
     return db_rating_with_game
 
 
-
 @router.delete("/me/ratings/{rating_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_my_rating(
     rating_id: int,
     current_user: Annotated[models.User, Depends(get_current_active_user)],
     db: SessionDep
 ):
-    # First, check if the rating exists by ID, regardless of owner
     db_rating = db.query(models.Rating).filter(models.Rating.rating_id == rating_id).first()
 
     if not db_rating:
@@ -320,13 +308,11 @@ def delete_my_rating(
             detail="Rating not found."
         )
 
-
     if db_rating.user_id != current_user.user_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to delete this rating."
         )
-
 
     db.delete(db_rating)
     db.commit()
@@ -346,31 +332,24 @@ def read_users_me_backlog(
     return backlog_items
 
 
-@router.get("/me/recommendations", response_model=schemas.RecommendationResponse)
+@router.get(
+    "/me/recommendations",
+    response_model=schemas.RecommendationResponse,
+    summary="Get recommendations for the current user",
+    description="Retrieves personalized game recommendations for the authenticated user, "
+                "prioritizing cached recommendations if available and not expired. "
+                "Can force new generation if needed.",
+)
 async def read_users_me_recommendations(
+    db: SessionDep,
     current_user: Annotated[models.User, Depends(get_current_user)],
-    db: SessionDep
+    force_generate: bool = Query(
+        False,
+        description="Set to true to force new recommendations generation, bypassing cache."
+    )
 ):
     """
-    Retrieves game recommendations for the currently authenticated user.
+    This endpoint now calls the get_user_recommendations from the recommendations router,
+    passing through the user_id and force_generate flag.
     """
-    recommended_games = user_crud.get_user_recommendations(
-        db=db, user_id=current_user.user_id
-    )
-
-    structured_recommendations = []
-    for game in recommended_games:
-        structured_recommendations.append(
-            schemas.StructuredRecommendation(
-                game_name=game.game_name,
-                genre=game.genre,
-                igdb_link=(f"https://www.igdb.com/games/{game.igdb_id}"
-                           if game.igdb_id else "N/A"),
-                reasoning="Based on your preferred genres and ratings."
-            )
-        )
-
-    return schemas.RecommendationResponse(
-        structured_recommendations=structured_recommendations,
-        gemini_response="Recommendations generated successfully."
-    )
+    return await get_recs_from_service(user_id=current_user.user_id, db=db, force_generate=force_generate)

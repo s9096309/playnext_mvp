@@ -2,18 +2,17 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" contenxt="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ratings - PlayNext</title>
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/style.css">
     <style>
-        /* CSS for Star Ratings */
         .stars {
             display: inline-block;
-            font-size: 1.5em; /* Adjust size of stars */
-            color: #ddd; /* Color of empty stars */
-            cursor: pointer; /* Indicates they are clickable */
-            user-select: none; /* Prevent text selection */
+            font-size: 1.5em;
+            color: #ddd;
+            cursor: pointer;
+            user-select: none;
         }
 
         .stars .star {
@@ -23,42 +22,39 @@
         }
 
         .stars .star.filled {
-            color: gold; /* Color of filled stars */
+            color: gold;
         }
 
         .stars .star.hovered {
-            color: orange; /* Color on hover/interaction */
+            color: orange;
         }
 
-        /* Specific styles for ratings form inputs */
-        /* Applying to the new select element */
         .rating-form-container select,
         .rating-form-container textarea {
-            width: calc(100% - 22px); /* Adjust based on your general input styling */
+            width: calc(100% - 22px);
             padding: 10px;
             margin-bottom: 10px;
             border: 1px solid #444;
             border-radius: 4px;
             background-color: #2a2a2a;
             color: #eee;
-            box-sizing: border-box; /* Include padding in width calculation */
+            box-sizing: border-box;
         }
 
         .rating-form-container textarea {
-            resize: vertical; /* Allow vertical resizing */
+            resize: vertical;
             min-height: 80px;
         }
 
         .rating-input .stars {
-            font-size: 2em; /* Larger stars for input */
+            font-size: 2em;
             margin-bottom: 10px;
         }
 
         .rating-input .star {
-            transition: color 0.2s ease-in-out; /* Smooth transition for star fill */
+            transition: color 0.2s ease-in-out;
         }
 
-        /* Styling for the rating form container */
         .rating-form-container {
             background-color: #1a1a1a;
             border: 1px solid #333;
@@ -77,7 +73,6 @@
             padding-bottom: 10px;
         }
 
-        /* Styles for the table display */
         #ratedGamesList table {
             width: 100%;
             border-collapse: collapse;
@@ -114,7 +109,7 @@
 
         .stars-display .star {
             font-size: 1.2em;
-            color: gold; /* Always gold for displayed stars */
+            color: gold;
         }
 
         .action-button {
@@ -141,7 +136,7 @@
         }
 
         .button-container {
-            white-space: nowrap; /* Prevent buttons from wrapping */
+            white-space: nowrap;
         }
 
         .empty-list {
@@ -187,6 +182,7 @@
                 <li><a href="/playnext_mvp/static/ratings.html">Ratings</a></li>
                 <li><a href="/playnext_mvp//static/about.html">About</a></li>
                 <li><a href="/playnext_mvp//static/backlog.html">Backlog</a></li>
+                <li><a href="/playnext_mvp/static/profile.html">Profile</a></li>
                 <li><span id="welcomeMessage" class="welcome-message" style="display: none;"></span></li>
                 <li><a href="/playnext_mvp/static/login.html" id="loginLink">Login</a></li>
                 <li><a href="/playnext_mvp//static/register.html" id="registerLink">Register</a></li>
@@ -242,8 +238,8 @@
 
     <script>
         const API_BASE_URL = 'http://127.0.0.1:8000';
-        const GAMES_ENDPOINT = `${API_BASE_URL}/games`; // No trailing slash for consistency
-        const USER_RATINGS_ENDPOINT = `${API_BASE_URL}/users/me/ratings`; // <-- REMOVED THE TRAILING SLASH HERE!
+        const GAMES_ENDPOINT = `${API_BASE_URL}/games`;
+        const USER_RATINGS_ENDPOINT = `${API_BASE_URL}/users/me/ratings`;
 
         const logoutButton = document.getElementById('logoutButton');
         const loginLink = document.getElementById('loginLink');
@@ -260,13 +256,12 @@
         const ratedGamesTableBody = document.getElementById('ratedGamesTableBody');
         const emptyRatingsMessage = document.getElementById('emptyRatingsMessage');
 
-        let currentStarRating = 0; // To store the selected star rating value (1-5)
+        let currentStarRating = 0;
 
-        // Helper function to display messages
         function showMessage(element, message, type = 'success') {
             if (element) {
                 element.textContent = message;
-                element.className = 'message'; // Reset classes
+                element.className = 'message';
                 element.classList.add(type);
                 element.style.display = 'block';
                 setTimeout(() => {
@@ -275,7 +270,6 @@
             }
         }
 
-        // Common Token Handling - CORRECTED KEY
         function getAuthToken() {
             return localStorage.getItem('accessToken');
         }
@@ -297,7 +291,7 @@
                     registerLink.style.display = 'none';
                 } catch (e) {
                     console.error("Failed to decode token:", e);
-                    logout(); // If token is malformed, log out
+                    logout();
                 }
                 return true;
             } else {
@@ -311,18 +305,16 @@
 
         function logout() {
             localStorage.removeItem('accessToken');
-            localStorage.removeItem('current_user_id'); // If you store this, clear it
+            localStorage.removeItem('current_user_id');
             checkLoginStatus();
             window.location.href = '/static/login.html';
         }
 
         logoutButton.addEventListener('click', logout);
 
-        // --- Game Dropdown Loading ---
         async function loadGamesForDropdown() {
             gameSelect.innerHTML = '<option value="">Loading games...</option>';
             try {
-                // Ensure GAMES_ENDPOINT also doesn't have a double slash if you change it from /games/ to /games
                 const response = await fetch(GAMES_ENDPOINT, {
                     method: 'GET',
                     headers: {
@@ -335,7 +327,7 @@
                 }
 
                 const games = await response.json();
-                gameSelect.innerHTML = '<option value="">Select a Game</option>'; // Reset after loading
+                gameSelect.innerHTML = '<option value="">Select a Game</option>';
                 if (games.length === 0) {
                     gameSelect.innerHTML = '<option value="">No games available</option>';
                     return;
@@ -353,18 +345,13 @@
             }
         }
 
-        // --- Star Rating Functionality ---
-        // Converts 1-5 star rating to 1.0-10.0 backend rating
         function convertStarsToBackendRating(starValue) {
             return parseFloat(starValue * 2);
         }
 
-        // Renders stars (either for input or display) and attaches listeners for input stars
         function renderStars(rating, container, isInput = false) {
-            container.innerHTML = ''; // Clear existing stars
+            container.innerHTML = '';
 
-            // For input, 'rating' is currentStarRating (1-5). For display, it's backend rating (1-10).
-            // For input, if currentStarRating is 0, effectiveRating will be 0, so no stars are filled.
             const effectiveRating = isInput ? rating : Math.ceil(rating / 2);
 
             for (let i = 1; i <= 5; i++) {
@@ -375,10 +362,8 @@
                 if (isInput) {
                     star.setAttribute('data-value', i);
 
-                    // Attach event listeners directly when creating for interactive stars
                     star.addEventListener('mouseover', () => {
                         const value = parseInt(star.dataset.value);
-                        // Get all stars within the container to apply hover effect
                         const allStarsInContainer = container.querySelectorAll('.star');
                         allStarsInContainer.forEach((s, index) => {
                             if (index < value) {
@@ -392,22 +377,18 @@
                     star.addEventListener('mouseout', () => {
                         const allStarsInContainer = container.querySelectorAll('.star');
                         allStarsInContainer.forEach(s => s.classList.remove('hovered'));
-                        // After mouseout, re-render the stars based on the *currently selected* rating.
-                        // This ensures the selected stars remain filled after hover state is gone.
                         renderStars(currentStarRating, container, true);
                     });
 
                     star.addEventListener('click', () => {
-                        currentStarRating = parseInt(star.dataset.value); // Update current selected star value (1-5)
-                        ratingValueInput.value = currentStarRating; // Update hidden 1-5 input
-                        backendRatingValueInput.value = convertStarsToBackendRating(currentStarRating); // Update hidden 1-10 input
+                        currentStarRating = parseInt(star.dataset.value);
+                        ratingValueInput.value = currentStarRating;
+                        backendRatingValueInput.value = convertStarsToBackendRating(currentStarRating);
 
-                        // Re-render the stars to show the newly selected rating
                         renderStars(currentStarRating, container, true);
                     });
                 }
 
-                // Apply 'filled' class based on the effective rating
                 if (i <= effectiveRating) {
                     star.classList.add('filled');
                 }
@@ -415,7 +396,6 @@
             }
         }
 
-        // --- Display Rated Games (Adapted for Table) ---
         async function displayRatedGames(ratings) {
             ratedGamesTableBody.innerHTML = '';
             if (ratings.length === 0) {
@@ -447,29 +427,24 @@
                         <button class="action-button delete-rating" data-id="${rating.rating_id}">Delete</button>
                     </td>
                 `;
-                // Render stars for display (non-interactive)
                 renderStars(rating.rating, row.querySelector('.stars-display'), false);
 
                 row.querySelector('.edit-rating').addEventListener('click', (e) => {
                     const btn = e.target;
                     const ratingId = btn.dataset.id;
                     const gameId = btn.dataset.gameId;
-                    const gameName = btn.dataset.gameName; // This now correctly comes from data-game-name which is populated from rating.game.game_name
-                    const ratingValueBackend = parseFloat(btn.dataset.rating); // 1-10 value
-                    const starRatingValue = parseInt(btn.dataset.starRating); // 1-5 star value
+                    const gameName = btn.dataset.gameName;
+                    const ratingValueBackend = parseFloat(btn.dataset.rating);
+                    const starRatingValue = parseInt(btn.dataset.starRating);
 
-                    // Set game dropdown
                     gameSelect.value = gameId;
-                    // Populate other form fields
                     commentInput.value = btn.dataset.comment;
 
-                    // Set star rating input
-                    currentStarRating = starRatingValue; // Update internal tracking
-                    ratingValueInput.value = starRatingValue; // Update hidden 1-5 input
-                    backendRatingValueInput.value = ratingValueBackend; // Update hidden 1-10 input
-                    renderStars(currentStarRating, starRatingInput, true); // Re-render input stars with correct selection
+                    currentStarRating = starRatingValue;
+                    ratingValueInput.value = starRatingValue;
+                    backendRatingValueInput.value = ratingValueBackend;
+                    renderStars(currentStarRating, starRatingInput, true);
 
-                    // Store rating ID for update operation
                     rateGameForm.setAttribute('data-rating-id', ratingId);
                     document.getElementById('submitRatingButton').textContent = 'Update Rating';
                     showMessage(rateGameMessage, `Editing rating for ${gameName}.`, 'info');
@@ -478,7 +453,6 @@
             });
         }
 
-        // --- Fetch Ratings ---
         async function fetchRatings() {
             const token = getAuthToken();
             if (!token) {
@@ -488,7 +462,6 @@
             }
 
             try {
-                // Now USER_RATINGS_ENDPOINT does NOT have a trailing slash, matching FastAPI
                 const response = await fetch(USER_RATINGS_ENDPOINT, {
                     method: 'GET',
                     headers: {
@@ -517,7 +490,6 @@
             }
         }
 
-        // --- Submit/Update Rating ---
         rateGameForm.addEventListener('submit', async (event) => {
             event.preventDefault();
             const token = getAuthToken();
@@ -531,7 +503,6 @@
             const comment = commentInput.value.trim();
             const ratingId = rateGameForm.getAttribute('data-rating-id');
 
-            // This validation check should now pass if stars are clicked
             if (!gameId || score === 0) {
                 showMessage(rateGameMessage, "Game and Rating are required.", "error");
                 return;
@@ -543,13 +514,13 @@
                 comment: comment || null
             };
 
-            let url = USER_RATINGS_ENDPOINT; // This is now correct, no trailing slash
+            let url = `${USER_RATINGS_ENDPOINT}/`;
             let method = 'POST';
 
             if (ratingId) {
-                url = `${USER_RATINGS_ENDPOINT}/${ratingId}`; // <-- ADDED SLASH BETWEEN ENDPOINT AND ID
+                url = `${USER_RATINGS_ENDPOINT}/${ratingId}`;
                 method = 'PUT';
-                delete payload.game_id; // Game ID is usually not changed for an existing rating
+                delete payload.game_id;
             }
 
             try {
@@ -581,18 +552,17 @@
                 ratingValueInput.value = '0';
                 backendRatingValueInput.value = '0';
                 currentStarRating = 0;
-                renderStars(0, starRatingInput, true); // Reset star display to 0 filled
+                renderStars(0, starRatingInput, true);
                 rateGameForm.removeAttribute('data-rating-id');
                 document.getElementById('submitRatingButton').textContent = 'Submit Rating';
-                gameSelect.value = ""; // Reset dropdown
-                fetchRatings(); // Refresh the list
+                gameSelect.value = "";
+                fetchRatings();
             } catch (error) {
                 console.error(`Error ${ratingId ? 'updating' : 'submitting'} rating:`, error);
                 showMessage(rateGameMessage, `An unexpected error occurred: ${error.message}`, "error");
             }
         });
 
-        // --- Delete Rating ---
         async function deleteRating(ratingId) {
             if (!confirm("Are you sure you want to delete this rating?")) {
                 return;
@@ -604,8 +574,7 @@
             }
 
             try {
-                // Now USER_RATINGS_ENDPOINT does NOT have a trailing slash
-                const response = await fetch(`${USER_RATINGS_ENDPOINT}/${ratingId}`, { // <-- ADDED SLASH BETWEEN ENDPOINT AND ID
+                const response = await fetch(`${USER_RATINGS_ENDPOINT}/${ratingId}`, {
                     method: 'DELETE',
                     headers: {
                         'Accept': 'application/json',
@@ -625,18 +594,16 @@
                 }
 
                 showMessage(rateGameMessage, "Rating deleted successfully!", "success");
-                fetchRatings(); // Refresh the list
+                fetchRatings();
             } catch (error) {
                 console.error('Error deleting rating:', error);
                 showMessage(rateGameMessage, `An unexpected error occurred: ${error.message}`, "error");
             }
         }
 
-        // --- Initial Load ---
         document.addEventListener('DOMContentLoaded', () => {
             checkLoginStatus();
             loadGamesForDropdown();
-            // Initial render of the interactive stars. currentStarRating is 0, so it will show 0 filled stars.
             renderStars(currentStarRating, starRatingInput, true);
             fetchRatings();
         });

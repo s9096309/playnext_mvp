@@ -6,8 +6,10 @@ CRUD operations for PlayNext database models.
 This module provides functions for creating, reading, updating, and deleting
 records for games, ratings, backlog items, and recommendations.
 """
+from __future__ import annotations
 
-from datetime import datetime
+import json
+from datetime import datetime, timedelta, timezone # Added timedelta and timezone
 from typing import Any, Callable, List, Optional
 
 from sqlalchemy import asc, desc
@@ -436,6 +438,7 @@ def create_recommendation(
 ) -> models.Recommendation:
     """
     Creates a new recommendation record in the database.
+    This now stores the full Gemini response.
 
     Args:
         db (Session): The database session.
@@ -488,6 +491,25 @@ def get_recommendations(
     return db.query(models.Recommendation).offset(skip).limit(limit).all()
 
 
+def get_latest_user_recommendation(db: Session, user_id: int) -> Optional[models.Recommendation]:
+    """
+    Retrieves the most recent recommendation generated for a user.
+    Used for caching purposes.
+
+    Args:
+        db (Session): The database session.
+        user_id (int): The ID of the user.
+
+    Returns:
+        Optional[models.Recommendation]: The most recent recommendation object if found,
+                                         otherwise None.
+    """
+    return db.query(models.Recommendation)\
+             .filter(models.Recommendation.user_id == user_id)\
+             .order_by(models.Recommendation.generation_timestamp.desc())\
+             .first()
+
+
 def update_recommendation(
     db: Session,
     recommendation_id: int,
@@ -495,6 +517,7 @@ def update_recommendation(
 ) -> Optional[models.Recommendation]:
     """
     Updates an existing recommendation record in the database.
+    This now updates the cached Gemini response.
 
     Args:
         db (Session): The database session.

@@ -49,7 +49,6 @@ class Game(Base):
     age_rating = Column(String)
 
     backlog_items = relationship("BacklogItem", back_populates="game")
-    recommendations = relationship("Recommendation", back_populates="game")
     ratings = relationship("Rating", back_populates="game")
 
 
@@ -70,18 +69,18 @@ class BacklogItem(Base):
 
 
 class Recommendation(Base):
-    """SQLAlchemy model for the 'recommendations' table."""
+    """SQLAlchemy model for the 'recommendations' table (updated for caching Gemini response)."""
     __tablename__ = "recommendations"
 
     recommendation_id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.user_id"))
-    game_id = Column(Integer, ForeignKey("games.game_id"))
-    timestamp = Column(DateTime)
-    recommendation_reason = Column(String)
-    documentation_rating = Column(Float)
+    user_id = Column(Integer, ForeignKey("users.user_id"), index=True) # Added index for faster lookups
+    generation_timestamp = Column(DateTime, default=datetime.datetime.utcnow)
+
+    # Fields to store the raw and structured JSON output from Gemini
+    raw_gemini_output = Column(String)
+    structured_json_output = Column(String)
 
     user = relationship("User", back_populates="recommendations")
-    game = relationship("Game", back_populates="recommendations")
 
 
 class Rating(Base):

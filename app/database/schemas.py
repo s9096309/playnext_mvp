@@ -1,3 +1,5 @@
+# app/database/schemas.py
+
 import datetime
 import enum
 from typing import List, Optional
@@ -69,7 +71,7 @@ class GameBase(BaseModel):
     release_date: Optional[datetime.date] = None
     platform: Optional[str] = None
     igdb_id: int
-    image_url: Optional[str] = None # This is the important field for the cover
+    image_url: Optional[str] = None
     age_rating: Optional[str] = Field(
         None, description="Game age rating (e.g., PEGI, ESRB equivalent)"
     )
@@ -135,24 +137,21 @@ class BacklogItem(BacklogItemBase):
 
 class RecommendationBase(BaseModel):
     user_id: int
-    game_id: int
-    timestamp: datetime.datetime
-    recommendation_reason: str
-    documentation_rating: float = Field(
-        ..., ge=0.0, le=5.0, description="Rating for documentation quality (0.0-5.0)"
-    )
 
     class Config:
         from_attributes = True
 
 
 class RecommendationCreate(RecommendationBase):
-    pass
+    raw_gemini_output: str
+    structured_json_output: str
+    generation_timestamp: datetime.datetime = Field(default_factory=lambda: datetime.datetime.now(datetime.timezone.utc))
 
 
 class RecommendationUpdate(BaseModel):
-    recommendation_reason: Optional[str] = None
-    documentation_rating: Optional[float] = Field(None, ge=0.0, le=5.0)
+    raw_gemini_output: Optional[str] = None
+    structured_json_output: Optional[str] = None
+    generation_timestamp: Optional[datetime.datetime] = None
 
     class Config:
         from_attributes = True
@@ -160,6 +159,9 @@ class RecommendationUpdate(BaseModel):
 
 class Recommendation(RecommendationBase):
     recommendation_id: int
+    raw_gemini_output: str
+    structured_json_output: str
+    generation_timestamp: datetime.datetime
 
     class Config:
         from_attributes = True
@@ -226,7 +228,6 @@ class RatingResponse(BaseModel):
         from_attributes = True
 
 
-
 class Token(BaseModel):
     access_token: str
     token_type: str
@@ -237,10 +238,13 @@ class TokenData(BaseModel):
 
 
 class StructuredRecommendation(BaseModel):
-    game_name: str
+    game_name: str = Field(..., alias="name")
     genre: str
-    igdb_link: str
+    igdb_link: Optional[str] = None
     reasoning: str
+
+    class Config:
+        populate_by_name = True
 
 
 class RecommendationResponse(BaseModel):
@@ -250,5 +254,3 @@ class RecommendationResponse(BaseModel):
 
 class UserRequest(BaseModel):
     user_id: int
-
-

@@ -6,5 +6,6 @@ __pycache__/
 .pytest_cache/
 .env
 venv/
-.idea/ # For PyCharm users
+.idea/
 *.db
+.coverage
