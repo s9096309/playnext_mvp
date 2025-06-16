@@ -237,7 +237,7 @@ async def get_user_recommendations(
                                     igdb_id=igdb_game_data["igdb_id"],
                                     genre=igdb_game_data.get("genre"),
                                     igdb_link=igdb_game_data.get("url"),
-                                    cover_url=igdb_game_data.get("cover_url"),
+                                    image_url=igdb_game_data.get("cover_url"),
                                 )
                                 db_game = crud.create_game(db, game=new_game_data)
                                 print(f"Created new game in DB: {final_game_name} "

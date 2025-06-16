@@ -29,7 +29,7 @@ class UserCreate(UserBase):
 
 
 class UserCreateDB(UserBase):
-    password_hash: str
+    hashed_password: str
     registration_date: datetime.datetime
     user_age: Optional[int] = None
 

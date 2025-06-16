@@ -7,14 +7,17 @@ from fastapi import Depends
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.engine import Engine
+from sqlalchemy.ext.declarative import declarative_base
 from dotenv import load_dotenv
-
-from app.database.models import Base
 
 load_dotenv()
 
 _engine: Engine = None
 _SessionLocal: sessionmaker = None
+
+
+Base = declarative_base()
+
 
 def get_engine() -> Engine:
     """
@@ -28,7 +31,7 @@ def get_engine() -> Engine:
             raise ValueError("DATABASE_URL not found in .env file or environment.")
 
         connect_args = {}
-        # Apply check_same_thread=False only for SQLite databases
+
         if database_url.startswith("sqlite:///"):
             connect_args["check_same_thread"] = False
 
@@ -68,5 +71,4 @@ def get_db() -> Generator[Session, None, None]:
     finally:
         db.close()
 
-# Define SessionDep here, after get_db
 SessionDep = Annotated[Session, Depends(get_db)]

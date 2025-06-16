@@ -1,0 +1,28 @@
+# docker-compose.yml
+# version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    volumes:
+      - pgdata:/var/lib/postgresql/data # This references the named volume 'pgdata'
+    environment:
+      POSTGRES_DB: playnext_db
+      POSTGRES_USER: kevinhoffmann
+      POSTGRES_PASSWORD: 24kvn187
+    ports:
+      - "5432:5432"
+
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./.env
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgresql://kevinhoffmann:24kvn187@db:5432/playnext_db
+
+volumes: # <-- ADD THIS SECTION
+  pgdata: # <-- DEFINE THE NAMED VOLUME HERE
