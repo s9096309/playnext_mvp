@@ -9,7 +9,7 @@ records for games, ratings, backlog items, and recommendations.
 from __future__ import annotations
 
 import json
-from datetime import datetime, timedelta, timezone # Added timedelta and timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, List, Optional
 
 from sqlalchemy import asc, desc
@@ -308,64 +308,64 @@ def delete_rating(db: Session, rating_id: int) -> Optional[models.Rating]:
     return db_rating
 
 
-def create_backlog_item(
+def create_backlog_entry( # Renamed function
     db: Session,
-    backlog_item: schemas.BacklogItemCreate
-) -> models.BacklogItem:
+    backlog_entry: schemas.BacklogCreate # Changed schema to BacklogCreate
+) -> models.Backlog: # Changed return type to models.Backlog
     """
-    Creates a new backlog item record in the database.
+    Creates a new backlog entry record in the database.
 
     Args:
         db (Session): The database session.
-        backlog_item (schemas.BacklogItemCreate): The Pydantic schema containing
-                                                backlog item data.
+        backlog_entry (schemas.BacklogCreate): The Pydantic schema containing
+                                                backlog entry data.
 
     Returns:
-        models.BacklogItem: The newly created backlog item database object.
+        models.Backlog: The newly created backlog database object.
     """
-    db_backlog_item = models.BacklogItem(**backlog_item.model_dump())
-    db.add(db_backlog_item)
+    db_backlog_entry = models.Backlog(**backlog_entry.model_dump()) # Changed to models.Backlog
+    db.add(db_backlog_entry)
     db.commit()
-    db.refresh(db_backlog_item)
-    return db_backlog_item
+    db.refresh(db_backlog_entry)
+    return db_backlog_entry
 
 
-def get_backlog_item(db: Session, backlog_id: int) -> Optional[models.BacklogItem]:
+def get_backlog_entry(db: Session, backlog_id: int) -> Optional[models.Backlog]: # Renamed function, changed return type
     """
-    Retrieves a backlog item record by its ID.
+    Retrieves a backlog entry record by its ID.
 
     Args:
         db (Session): The database session.
-        backlog_id (int): The ID of the backlog item to retrieve.
+        backlog_id (int): The ID of the backlog entry to retrieve.
 
     Returns:
-        Optional[models.BacklogItem]: The backlog item object if found,
+        Optional[models.Backlog]: The backlog entry object if found,
                                       otherwise None.
     """
-    return db.query(models.BacklogItem).filter(
-        models.BacklogItem.backlog_id == backlog_id
+    return db.query(models.Backlog).filter( # Changed to models.Backlog
+        models.Backlog.backlog_id == backlog_id
     ).first()
 
 
-def get_user_backlog(db: Session, user_id: int) -> List[models.BacklogItem]:
+def get_user_backlog(db: Session, user_id: int) -> List[models.Backlog]: # Return type already correct
     """
-    Retrieves all backlog items for a specific user.
+    Retrieves all backlog entries for a specific user.
 
     Args:
         db (Session): The database session.
         user_id (int): The ID of the user whose backlog to retrieve.
 
     Returns:
-        List[models.BacklogItem]: A list of backlog item objects for the user.
+        List[models.Backlog]: A list of backlog entry objects for the user.
     """
-    return db.query(models.BacklogItem).filter(
-        models.BacklogItem.user_id == user_id
+    return db.query(models.Backlog).filter(
+        models.Backlog.user_id == user_id
     ).all()
 
 
-def get_backlog_items(db: Session, skip: int = 0, limit: int = 100) -> List[models.BacklogItem]:
+def get_backlog_entries(db: Session, skip: int = 0, limit: int = 100) -> List[models.Backlog]: # Renamed function, changed return type
     """
-    Retrieves a list of backlog items with pagination.
+    Retrieves a list of backlog entries with pagination.
 
     Args:
         db (Session): The database session.
@@ -373,63 +373,63 @@ def get_backlog_items(db: Session, skip: int = 0, limit: int = 100) -> List[mode
         limit (int): The maximum number of records to return.
 
     Returns:
-        List[models.BacklogItem]: A list of backlog item objects.
+        List[models.Backlog]: A list of backlog entry objects.
     """
-    return db.query(models.BacklogItem).offset(skip).limit(limit).all()
+    return db.query(models.Backlog).offset(skip).limit(limit).all() # Changed to models.Backlog
 
 
-def update_backlog_item(
+def update_backlog_entry( # Renamed function
     db: Session,
     backlog_id: int,
-    backlog_item_update: schemas.BacklogItemUpdate
-) -> Optional[models.BacklogItem]:
+    backlog_update: schemas.BacklogUpdate # Changed schema to BacklogUpdate
+) -> Optional[models.Backlog]: # Changed return type to models.Backlog
     """
-    Updates an existing backlog item record in the database.
+    Updates an existing backlog entry record in the database.
 
     Args:
         db (Session): The database session.
-        backlog_id (int): The ID of the backlog item to update.
-        backlog_item_update (schemas.BacklogItemUpdate): The Pydantic schema with
+        backlog_id (int): The ID of the backlog entry to update.
+        backlog_update (schemas.BacklogUpdate): The Pydantic schema with
                                                          update data.
 
     Returns:
-        Optional[models.BacklogItem]: The updated backlog item object if found,
+        Optional[models.Backlog]: The updated backlog entry object if found,
                                       otherwise None.
     """
-    db_backlog_item = db.query(models.BacklogItem).filter(
-        models.BacklogItem.backlog_id == backlog_id
+    db_backlog_entry = db.query(models.Backlog).filter( # Changed to models.Backlog
+        models.Backlog.backlog_id == backlog_id
     ).first()
-    if not db_backlog_item:
+    if not db_backlog_entry:
         return None
 
-    update_data = backlog_item_update.model_dump(exclude_unset=True)
+    update_data = backlog_update.model_dump(exclude_unset=True)
     for key, value in update_data.items():
-        setattr(db_backlog_item, key, value)
+        setattr(db_backlog_entry, key, value)
 
     db.commit()
-    db.refresh(db_backlog_item)
-    return db_backlog_item
+    db.refresh(db_backlog_entry)
+    return db_backlog_entry
 
 
-def delete_backlog_item(db: Session, backlog_id: int) -> Optional[models.BacklogItem]:
+def delete_backlog_entry(db: Session, backlog_id: int) -> Optional[models.Backlog]: # Renamed function, changed return type
     """
-    Deletes a backlog item record from the database.
+    Deletes a backlog entry record from the database.
 
     Args:
         db (Session): The database session.
-        backlog_id (int): The ID of the backlog item to delete.
+        backlog_id (int): The ID of the backlog entry to delete.
 
     Returns:
-        Optional[models.BacklogItem]: The deleted backlog item object if found
+        Optional[models.Backlog]: The deleted backlog entry object if found
                                       and deleted, otherwise None.
     """
-    db_backlog_item = db.query(models.BacklogItem).filter(
-        models.BacklogItem.backlog_id == backlog_id
+    db_backlog_entry = db.query(models.Backlog).filter( # Changed to models.Backlog
+        models.Backlog.backlog_id == backlog_id
     ).first()
-    if db_backlog_item:
-        db.delete(db_backlog_item)
+    if db_backlog_entry:
+        db.delete(db_backlog_entry)
         db.commit()
-    return db_backlog_item
+    return db_backlog_entry
 
 
 def create_recommendation(

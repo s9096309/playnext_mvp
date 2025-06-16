@@ -1,0 +1,22 @@
+.git
+.gitignore
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.venv
+venv/
+env/
+.vscode
+.idea
+.pytest_cache
+*.db # Exclude your SQLite database file if you have one locally
+instance/
+test/
+dist/
+build/
+*.egg-info/
+.mypy_cache/
+.DS_Store
+*.env
+.env

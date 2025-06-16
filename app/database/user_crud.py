@@ -35,10 +35,10 @@ def create_user(db: Session, user: schemas.UserCreateDB) -> models.User:
     db_user = models.User(
         username=user.username,
         email=user.email,
-        password_hash=user.password_hash,
+        hashed_password=user.hashed_password,
+        registration_date=user.registration_date,
         user_age=user.user_age,
         is_admin=user.is_admin,
-        registration_date=user.registration_date,
         igdb_id=user.igdb_id
     )
     db.add(db_user)
@@ -78,7 +78,7 @@ def delete_user(db: Session, user_id: int) -> Optional[models.User]:
     return db_user
 
 
-def get_user_backlog(db: Session, user_id: int) -> List[models.BacklogItem]:
+def get_user_backlog(db: Session, user_id: int) -> List[models.Backlog]:
     """Retrieve all backlog items for a specific user."""
     return db.query(models.BacklogItem).filter(models.BacklogItem.user_id == user_id).all()
 
