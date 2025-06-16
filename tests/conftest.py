@@ -7,7 +7,16 @@ from app.main import app
 from fastapi.testclient import TestClient
 from app.database.models import Base
 from app.database.session import get_db
-from fastapi.testclient import TestClient
+from dotenv import load_dotenv
+
+# --- Fixture to load .env for tests ---
+@pytest.fixture(scope="session", autouse=True)
+def load_env_for_tests():
+    """
+    Loads environment variables from the .env file for testing.
+    This ensures SECRET_KEY and other env vars are available to the app during tests.
+    """
+    load_dotenv()
 
 
 # Use an in-memory SQLite database for testing. It's destroyed after the tests.
@@ -52,4 +61,3 @@ def client_fixture(db_session: Session):
         yield test_client
     # Clean up the dependency override after the test
     app.dependency_overrides.clear() # Clears all overrides
-
