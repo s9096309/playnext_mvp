@@ -67,7 +67,7 @@
                 <tr>
                     <th>Rating</th>
                     <th>Comment</th>
-                </tr>
+                    <th>Date</th> </tr>
             </thead>
             <tbody id="ratings-table-body">
             </tbody>
@@ -75,41 +75,92 @@
     </div>
 
     <script>
+        const API_BASE_URL = 'http://127.0.0.1:8000'; // Consistent API URL
+
+        function getAccessToken() {
+            return localStorage.getItem('accessToken');
+        }
+
+        function checkLoginStatusForBasicPage() {
+            const token = getAccessToken();
+            if (!token) {
+                console.warn("User not logged in. Rating submission might fail without a token.");
+                // Optionally redirect to login or show a message
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
+            checkLoginStatusForBasicPage(); // Check login status on page load
+
             const urlParams = new URLSearchParams(window.location.search);
             const gameId = urlParams.get('game_id');
 
-            fetch('https://playnext-mvp.onrender.com/games/')
-                .then(response => response.json())
-                .then(ratings => {
-                    const ratingsTableBody = document.getElementById('ratings-table-body');
+            if (!gameId) {
+                console.error("No game_id found in URL. Cannot fetch/submit ratings for a specific game.");
+                document.getElementById('ratings-form-container').innerHTML = "<p>Error: Game ID missing. Please navigate from a game page.</p>";
+                document.getElementById('ratings-list').innerHTML = "<p>Error: Cannot display ratings without a game ID.</p>";
+                return; // Stop execution if no game ID
+            }
+
+            // Fetch ratings for the specific game
+            fetch(`${API_BASE_URL}/games/${gameId}/ratings`, { // Assuming an endpoint like /games/{game_id}/ratings
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    // No token needed if this endpoint is public
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(ratings => {
+                const ratingsTableBody = document.getElementById('ratings-table-body');
+                ratingsTableBody.innerHTML = ''; // Clear existing content
+                if (ratings.length === 0) {
+                    ratingsTableBody.innerHTML = '<tr><td colspan="3">No ratings found for this game.</td></tr>';
+                } else {
                     ratings.forEach(rating => {
                         const row = document.createElement('tr');
                         row.innerHTML = `
                             <td>${rating.rating}</td>
-                            <td>${rating.comment || ''}</td>
-                            <td>${rating.rating_date}</td>
+                            <td>${rating.comment || 'No comment'}</td>
+                            <td>${new Date(rating.rating_date).toLocaleDateString()}</td>
                         `;
                         ratingsTableBody.appendChild(row);
                     });
-                })
-                .catch(error => {
-                    console.error('Error fetching ratings:', error);
-                    alert('Failed to fetch ratings.');
-                });
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching ratings:', error);
+                alert('Failed to fetch ratings for this game.');
+                document.getElementById('ratings-table-body').innerHTML = '<tr><td colspan="3">Error loading ratings.</td></tr>';
+            });
 
             document.getElementById('ratings-form').addEventListener('submit', function(event) {
                 event.preventDefault();
 
+                const token = getAccessToken(); // Get token dynamically
+                if (!token) {
+                    alert('You must be logged in to submit a rating.');
+                    return;
+                }
+
                 const rating = document.getElementById('rating').value;
                 const comment = document.getElementById('comment').value;
-                const ratingDate = document.getElementById('rating_date').value;
 
-                fetch('/ratings/me/', {
+                if (!rating || rating < 1 || rating > 10) {
+                    alert('Please enter a valid rating between 1 and 10.');
+                    return;
+                }
+
+                fetch(`${API_BASE_URL}/users/me/ratings/`, { // Endpoint for user's ratings
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbiIsImV4cCI6MTc0MjkyMTU0NX0.Ksn7YhocTjpVhS5AZCupMqWTSqcekFiF-FKWEO01qHU' // Replace with your JWT token
+                        'Authorization': `Bearer ${token}` // Use dynamic token
                     },
                     body: JSON.stringify({
                         game_id: parseInt(gameId),
@@ -120,19 +171,22 @@
                 .then(response => {
                     if (response.ok) {
                         alert('Rating submitted successfully!');
-                        // Refresh the ratings list
-                        window.location.reload();
+                        window.location.reload(); // Reload to see the new rating
+                    } else if (response.status === 401 || response.status === 403) {
+                        alert('Unauthorized. Please log in again.');
+                        // Optionally redirect to login page: window.location.href = '/static/login.html';
                     } else {
-                        alert('Failed to submit rating.');
+                        return response.json().then(err => {
+                            alert(`Failed to submit rating: ${err.detail || response.statusText}`);
+                        });
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    alert('An error occurred.');
+                    alert('An error occurred while submitting rating.');
                 });
             });
         });
     </script>
 </body>
 </html>
-
