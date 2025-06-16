@@ -15,10 +15,10 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
 
-    registration_date = Column(DateTime, default=datetime.now(UTC), nullable=False) # <--- THIS IS THE KEY CHANGE
+    registration_date = Column(DateTime, default=datetime.now(UTC), nullable=False)
     user_age = Column(Integer, nullable=True)
     is_admin = Column(Boolean, default=False, nullable=False)
-    igdb_id = Column(BigInteger, unique=True, index=True, nullable=True)
+    igdb_id = Column(Integer, unique=True, index=True, nullable=True)
 
     recommendations = relationship("Recommendation", back_populates="user")
     ratings = relationship("Rating", back_populates="user")
