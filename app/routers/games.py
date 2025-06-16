@@ -12,7 +12,7 @@ from datetime import datetime
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.database import crud, schemas, models
 from app.database.session import get_db
@@ -36,7 +36,7 @@ def _process_igdb_game_data(igdb_game: dict) -> schemas.GameCreate:
                           for rating in igdb_game['age_ratings']]
         valid_ratings = [rating for rating in mapped_ratings if rating is not None]
         if valid_ratings:
-            age_rating = max(valid_ratings) # This needs to be carefully considered for string comparison
+            age_rating = max(valid_ratings)
 
     release_date = datetime(2000, 1, 1).date()
     if 'release_dates' in igdb_game and igdb_game['release_dates']:
@@ -117,7 +117,6 @@ def read_games(
     genre: Optional[str] = Query(None, description="Filter games by genre"),
     platform: Optional[str] = Query(None, description="Filter games by platform"),
     db: Session = Depends(get_db)
-    # REMOVED: current_user: models.User = Depends(get_current_user)
 ):
     """
     Retrieves a list of games with optional filtering and pagination.
@@ -140,6 +139,29 @@ def read_games(
         if game.image_url is None:
             game.image_url = ""
     return games
+
+# --- NEW ENDPOINT FOR ALL RATINGS FOR A SPECIFIC GAME ---
+@router.get("/{game_id}/ratings", response_model=List[schemas.RatingWithUserAndGame])
+async def get_all_ratings_for_game(
+    game_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Retrieve all ratings for a specific game, including the rating user's details and game details.
+    """
+    # Check if the game exists (optional but good practice)
+    game = db.query(models.Game).filter(models.Game.game_id == game_id).first()
+    if not game:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Game not found")
+
+    # Fetch ratings for the game, eager-loading user and game details
+    ratings = db.query(models.Rating).options(
+        joinedload(models.Rating.user), # Eagerly load the user who made the rating
+        joinedload(models.Rating.game)  # Eagerly load the game details
+    ).filter(models.Rating.game_id == game_id).all()
+
+    # If no ratings are found, return an empty list (which matches response_model)
+    return ratings
 
 @router.put("/{game_id}", response_model=schemas.Game)
 def update_game(
