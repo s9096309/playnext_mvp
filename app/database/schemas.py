@@ -243,3 +243,28 @@ class RecommendationResponse(BaseModel):
 
 class UserRequest(BaseModel):
     user_id: int
+
+class UserInRating(BaseModel): # A slimmed-down User schema for embedding in Rating
+    user_id: int
+    username: str
+    class Config:
+        from_attributes = True
+
+class GameInRating(BaseModel):
+    game_id: int
+    game_name: str
+    image_url: Optional[str] = None
+    class Config:
+        from_attributes = True
+
+class RatingWithUserAndGame(BaseModel):
+    rating_id: int
+    game_id: int
+    user_id: int
+    rating: float
+    comment: Optional[str] = None
+    timestamp: datetime
+    user: UserInRating
+    game: GameInRating
+    class Config:
+        from_attributes = True
