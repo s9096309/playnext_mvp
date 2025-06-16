@@ -56,214 +56,229 @@
         </div>
     </main>
 
-    <script>
-        const API_BASE_URL = 'http://51.20.51.204:8000';
-        const gamesTableBody = document.getElementById('gamesTableBody');
-        const emptyListMessage = document.getElementById('emptyListMessage');
-        const addGameForm = document.getElementById('addGameForm');
-        const addGameMessage = document.getElementById('addGameMessage');
-        const logoutButton = document.getElementById('logoutButton');
-        const loginLink = document.getElementById('loginLink');
-        const registerLink = document.getElementById('registerLink');
-        const welcomeMessage = document.getElementById('welcomeMessage');
+   <script>
+    const API_BASE_URL = 'http://51.20.51.204:8000';
+    const gamesTableBody = document.getElementById('gamesTableBody');
+    const emptyListMessage = document.getElementById('emptyListMessage');
+    const addGameForm = document.getElementById('addGameForm');
+    const addGameMessage = document.getElementById('addGameMessage');
+    const logoutButton = document.getElementById('logoutButton');
+    const loginLink = document.getElementById('loginLink');
+    const registerLink = document.getElementById('registerLink');
+    const welcomeMessage = document.getElementById('welcomeMessage');
 
-        function showMessage(element, message, type = 'success') {
-            element.textContent = message;
-            element.className = 'message';
-            element.classList.add(type);
-            element.style.display = 'block';
-            setTimeout(() => {
-                element.style.display = 'none';
-            }, 5000);
-        }
+    function showMessage(element, message, type = 'success') {
+        element.textContent = message;
+        element.className = 'message';
+        element.classList.add(type);
+        element.style.display = 'block';
+        setTimeout(() => {
+            element.style.display = 'none';
+        }, 5000);
+    }
 
-        function getAccessToken() {
-            return localStorage.getItem('accessToken');
-        }
+    function getAccessToken() {
+        return localStorage.getItem('accessToken');
+    }
 
-        function checkLoginStatus() {
-            const token = getAccessToken();
-            if (token) {
-                try {
-                    const base64Url = token.split('.')[1];
-                    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-                    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-                        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-                    }).join(''));
-                    const payload = JSON.parse(jsonPayload);
-                    welcomeMessage.textContent = `Welcome, ${payload.sub}!`;
-                    welcomeMessage.style.display = 'inline';
-                    logoutButton.style.display = 'inline';
-                    loginLink.style.display = 'none';
-                    registerLink.style.display = 'none';
-                } catch (e) {
-                    console.error("Failed to decode token:", e);
-                    logout();
-                }
-                return true;
-            } else {
-                welcomeMessage.style.display = 'none';
-                logoutButton.style.display = 'none';
-                loginLink.style.display = 'inline';
-                registerLink.style.display = 'inline';
-                return false;
+    function checkLoginStatus() {
+        const token = getAccessToken();
+        if (token) {
+            try {
+                const base64Url = token.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+                const payload = JSON.parse(jsonPayload);
+                welcomeMessage.textContent = `Welcome, ${payload.sub}!`;
+                welcomeMessage.style.display = 'inline';
+                logoutButton.style.display = 'inline';
+                loginLink.style.display = 'none';
+                registerLink.style.display = 'none';
+            } catch (e) {
+                console.error("Failed to decode token:", e);
+                logout();
             }
+            return true;
+        } else {
+            welcomeMessage.style.display = 'none';
+            logoutButton.style.display = 'none';
+            loginLink.style.display = 'inline';
+            registerLink.style.display = 'inline';
+            return false;
         }
+    }
 
-        function logout() {
-            localStorage.removeItem('accessToken');
-            checkLoginStatus();
-            window.location.href = '/static/login.html';
+    function logout() {
+        localStorage.removeItem('accessToken');
+        checkLoginStatus();
+        window.location.href = '/static/login.html';
+    }
+
+    logoutButton.addEventListener('click', logout);
+
+
+    // MODIFIED displayGames FUNCTION
+    function displayGames(games) {
+        gamesTableBody.innerHTML = '';
+        if (games.length === 0) {
+            emptyListMessage.style.display = 'block';
+            return;
         }
+        emptyListMessage.style.display = 'none';
 
-        logoutButton.addEventListener('click', logout);
-
-
-        function displayGames(games) {
-            gamesTableBody.innerHTML = '';
-            if (games.length === 0) {
-                emptyListMessage.style.display = 'block';
-                return;
-            }
-            emptyListMessage.style.display = 'none';
-
-            games.forEach(game => {
-                const row = gamesTableBody.insertRow();
-                row.innerHTML = `
-                    <td>
-                        ${game.image_url ? `<img src="${game.image_url}" alt="${game.game_name} Cover" class="game-cover-thumbnail">` : 'N/A'}
-                    </td>
-                    <td>${game.game_name}</td>
-                    <td>${game.genre || 'N/A'}</td>
-                    <td>${game.platform || 'N/A'}</td>
-                    <td>${game.release_date || 'N/A'}</td>
-                    <td class="button-container">
-                        <button class="action-button view-ratings" data-id="${game.game_id}">Ratings</button>
-                        <button class="action-button add-to-backlog" data-id="${game.game_id}">Backlog</button>
-                        <button class="action-button edit-game" data-id="${game.game_id}">Edit</button>
-                        <button class="action-button delete-game" data-id="${game.game_id}">Delete</button>
-                    </td>
-                `;
-                row.querySelector('.view-ratings').addEventListener('click', () => alert(`Viewing ratings for ${game.game_name}`));
-                row.querySelector('.add-to-backlog').addEventListener('click', () => alert(`Adding ${game.game_name} to backlog`));
-                row.querySelector('.edit-game').addEventListener('click', () => alert(`Editing ${game.game_name}`));
-                row.querySelector('.delete-game').addEventListener('click', () => deleteGame(game.game_id));
+        games.forEach(game => {
+            const row = gamesTableBody.insertRow();
+            row.innerHTML = `
+                <td>
+                    ${game.image_url ? `<img src="${game.image_url}" alt="${game.game_name} Cover" class="game-cover-thumbnail">` : 'N/A'}
+                </td>
+                <td>${game.game_name}</td>
+                <td>${game.genre || 'N/A'}</td>
+                <td>${game.platform || 'N/A'}</td>
+                <td>${game.release_date || 'N/A'}</td>
+                <td class="button-container">
+                    <button class="action-button view-ratings" data-id="${game.game_id}">Ratings</button>
+                    <button class="action-button add-to-backlog" data-id="${game.game_id}">Backlog</button>
+                    <button class="action-button edit-game" data-id="${game.game_id}">Edit</button>
+                    <button class="action-button delete-game" data-id="${game.game_id}">Delete</button>
+                </td>
+            `;
+            // Attach event listeners for each button
+            row.querySelector('.view-ratings').addEventListener('click', () => {
+                const gameId = row.querySelector('.view-ratings').dataset.id;
+                window.location.href = `/static/ratings.html?game_id=${gameId}`;
             });
-        }
 
-        async function fetchGames() {
-            const token = getAccessToken();
-            if (!token) {
-                emptyListMessage.style.display = 'block';
-                gamesTableBody.innerHTML = '';
-                return;
-            }
+            row.querySelector('.add-to-backlog').addEventListener('click', () => {
+                const gameId = row.querySelector('.add-to-backlog').dataset.id;
+                window.location.href = `/static/backlog.html?game_id=${gameId}`;
+            });
 
-            try {
-                const response = await fetch(`${API_BASE_URL}/games/`, {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
+            row.querySelector('.edit-game').addEventListener('click', () => {
+                const gameId = row.querySelector('.edit-game').dataset.id;
+                window.location.href = `/static/edit_game.html?game_id=${gameId}`; // You will need to create edit_game.html
+            });
 
-                if (!response.ok) {
-                    if (response.status === 401) {
-                        showMessage(addGameMessage, "Session expired or unauthorized. Please log in.", "error");
-                        logout();
-                    } else {
-                        const errorData = await response.json();
-                        showMessage(addGameMessage, `Failed to fetch games: ${errorData.detail || response.statusText}`, "error");
-                    }
-                    return;
-                }
-
-                const games = await response.json();
-                displayGames(games);
-
-            } catch (error) {
-                console.error('Error fetching games:', error);
-                showMessage(addGameMessage, `An unexpected error occurred: ${error.message}`, "error");
-            }
-        }
-
-        addGameForm.addEventListener('submit', async (event) => {
-            event.preventDefault();
-            const token = getAccessToken();
-            if (!token) {
-                showMessage(addGameMessage, "You must be logged in to add games.", "error");
-                return;
-            }
-
-            const title = document.getElementById('game_name').value.trim();
-
-            if (!title) {
-                showMessage(addGameMessage, "Game Name is required.", "error");
-                return;
-            }
-
-            try {
-                const response = await fetch(`${API_BASE_URL}/games/?title=${encodeURIComponent(title)}`, {
-                    method: 'POST',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    showMessage(addGameMessage, `Failed to add game: ${errorData.detail || response.statusText}`, "error");
-                    return;
-                }
-
-                showMessage(addGameMessage, "Game added successfully!", "success");
-                addGameForm.reset();
-                fetchGames();
-            } catch (error) {
-                console.error('Error adding game:', error);
-                showMessage(addGameMessage, `An unexpected error occurred: ${error.message}`, "error");
-            }
+            // The deleteGame function is already defined below, so this is correct
+            row.querySelector('.delete-game').addEventListener('click', () => deleteGame(game.game_id));
         });
+    }
 
-        async function deleteGame(gameId) {
-            if (!confirm("Are you sure you want to delete this game?")) {
-                return;
-            }
-            const token = getAccessToken();
-            if (!token) {
-                showMessage(addGameMessage, "You must be logged in to delete games.", "error");
-                return;
-            }
-
-            try {
-                const response = await fetch(`${API_BASE_URL}/games/${gameId}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    showMessage(addGameMessage, `Failed to delete game: ${errorData.detail || response.statusText}`, "error");
-                    return;
-                }
-
-                showMessage(addGameMessage, "Game deleted successfully!", "success");
-                fetchGames();
-            } catch (error) {
-                    console.error('Error deleting game:', error);
-                    showMessage(addGameMessage, `An unexpected error occurred: ${error.message}`, "error");
-            }
+    async function fetchGames() {
+        const token = getAccessToken();
+        if (!token) {
+            emptyListMessage.style.display = 'block';
+            gamesTableBody.innerHTML = '';
+            return;
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            checkLoginStatus();
+        try {
+            const response = await fetch(`${API_BASE_URL}/games/`, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) {
+                if (response.status === 401) {
+                    showMessage(addGameMessage, "Session expired or unauthorized. Please log in.", "error");
+                    logout();
+                } else {
+                    const errorData = await response.json();
+                    showMessage(addGameMessage, `Failed to fetch games: ${errorData.detail || response.statusText}`, "error");
+                }
+                return;
+            }
+
+            const games = await response.json();
+            displayGames(games);
+
+        } catch (error) {
+            console.error('Error fetching games:', error);
+            showMessage(addGameMessage, `An unexpected error occurred: ${error.message}`, "error");
+        }
+    }
+
+    addGameForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const token = getAccessToken();
+        if (!token) {
+            showMessage(addGameMessage, "You must be logged in to add games.", "error");
+            return;
+        }
+
+        const title = document.getElementById('game_name').value.trim();
+
+        if (!title) {
+            showMessage(addGameMessage, "Game Name is required.", "error");
+            return;
+        }
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/games/?title=${encodeURIComponent(title)}`, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                showMessage(addGameMessage, `Failed to add game: ${errorData.detail || response.statusText}`, "error");
+                return;
+            }
+
+            showMessage(addGameMessage, "Game added successfully!", "success");
+            addGameForm.reset();
             fetchGames();
-        });
-    </script>
+        } catch (error) {
+            console.error('Error adding game:', error);
+            showMessage(addGameMessage, `An unexpected error occurred: ${error.message}`, "error");
+        }
+    });
+
+    async function deleteGame(gameId) {
+        if (!confirm("Are you sure you want to delete this game?")) {
+            return;
+        }
+        const token = getAccessToken();
+        if (!token) {
+            showMessage(addGameMessage, "You must be logged in to delete games.", "error");
+            return;
+        }
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/games/${gameId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Accept': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                showMessage(addGameMessage, `Failed to delete game: ${errorData.detail || response.statusText}`, "error");
+                return;
+            }
+
+            showMessage(addGameMessage, "Game deleted successfully!", "success");
+            fetchGames();
+        } catch (error) {
+                console.error('Error deleting game:', error);
+                showMessage(addGameMessage, `An unexpected error occurred: ${error.message}`, "error");
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        checkLoginStatus();
+        fetchGames();
+    });
+</script>
 </body>
 </html>
