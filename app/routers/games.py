@@ -1,10 +1,15 @@
-# app/routers/games.py
+"""
+API endpoints for managing game data.
+
+This module provides routes for creating, retrieving, updating, and deleting games.
+It integrates with the IGDB API for searching and adding new games.
+"""
 
 import datetime
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, joinedload # joinedload is used below
 
 from app.database import crud, schemas, models
 from app.database.session import get_db
@@ -16,6 +21,18 @@ router = APIRouter(prefix="/games", tags=["Games"])
 
 
 def _process_igdb_game_data(igdb_game: dict) -> schemas.GameCreate:
+    """
+    Processes raw IGDB game data into a schemas.GameCreate object.
+
+    Extracts relevant information like image URLs, age ratings, and release dates
+    from the IGDB response and formats it for database insertion.
+
+    Args:
+        igdb_game (dict): A dictionary containing raw game data from the IGDB API.
+
+    Returns:
+        schemas.GameCreate: A Pydantic schema ready for creating a new game.
+    """
     image_url = ""
     if 'cover' in igdb_game and igdb_game['cover']:
         cover_data = igdb_utils.get_cover_url(igdb_game['cover']['id'])
@@ -24,6 +41,9 @@ def _process_igdb_game_data(igdb_game: dict) -> schemas.GameCreate:
 
     age_rating: Optional[str] = None
     if 'age_ratings' in igdb_game and igdb_game['age_ratings']:
+        # IMPORTANT: Ensure igdb_utils.get_age_ratings and igdb_utils.map_igdb_age_rating
+        # exist and are correctly implemented in app/utils/igdb_utils.py
+        # Pylint previously flagged 'get_age_ratings' as non-existent (E1101).
         mapped_ratings = [
             igdb_utils.map_igdb_age_rating(rating['rating'])
             for rating in igdb_utils.get_age_ratings(igdb_game['age_ratings'])
@@ -37,7 +57,9 @@ def _process_igdb_game_data(igdb_game: dict) -> schemas.GameCreate:
         release_date_str = igdb_game['release_dates'][0].get('human')
         if release_date_str:
             try:
-                release_date = datetime.datetime.strptime(release_date_str, "%b %d, %Y").date()
+                release_date = datetime.datetime.strptime(
+                    release_date_str, "%b %d, %Y"
+                ).date()
             except ValueError:
                 print(
                     f"Warning: Could not parse release date for "
@@ -48,7 +70,9 @@ def _process_igdb_game_data(igdb_game: dict) -> schemas.GameCreate:
         game_name=igdb_game.get('name', "Unknown Game"),
         genre=", ".join([genre['name'] for genre in igdb_game.get('genres', [])]),
         release_date=release_date,
-        platform=", ".join([platform['name'] for platform in igdb_game.get('platforms', [])]),
+        platform=", ".join(
+            [platform['name'] for platform in igdb_game.get('platforms', [])]
+        ),
         igdb_id=igdb_game.get('id', 0),
         image_url=image_url,
         age_rating=age_rating,
@@ -84,11 +108,12 @@ def create_game(
             - 404 Not Found: If the game is not found on IGDB.
             - 400 Bad Request: If the game is already registered in the database.
     """
-    # if not current_user.is_admin:
-    #    raise HTTPException(
-    #        status_code=status.HTTP_403_FORBIDDEN,
-    #        detail="Only administrators can add new games."
-    #    )
+    # Uncomment the following block to enforce admin-only access
+    if not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only administrators can add new games."
+        )
 
     igdb_games = igdb_utils.search_games_igdb(title)
     if not igdb_games:
@@ -99,13 +124,19 @@ def create_game(
 
     db_game = crud.get_game_by_igdb_id(db, igdb_id=igdb_id)
     if db_game:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Game already registered")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Game already registered"
+        )
 
     game_data = _process_igdb_game_data(igdb_game_data)
     return crud.create_game(db=db, game=game_data)
 
 
 @router.get("/", response_model=List[schemas.Game])
+# pylint: disable=R0913, R0917
+# R0913 (Too many arguments) and R0917 (Too many positional arguments)
+# are disabled here as these query parameters are often necessary for
+# flexible filtering and pagination in a GET endpoint.
 def read_games(
     skip: int = 0,
     limit: int = 100,
@@ -123,7 +154,8 @@ def read_games(
     Args:
         skip (int): The number of records to skip (for pagination).
         limit (int): The maximum number of records to return.
-        sort_by (Optional[str]): Field to sort the games by ('game_name', 'release_date', 'age_rating').
+        sort_by (Optional[str]): Field to sort the games by
+                                  ('game_name', 'release_date', 'age_rating').
         genre (Optional[str]): Filter games by a specific genre.
         platform (Optional[str]): Filter games by a specific platform.
         db (Session): The database session.
@@ -295,7 +327,10 @@ def search_games(
 
     igdb_games = igdb_utils.search_games_igdb(query_str)
     if not igdb_games:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No games found locally or on IGDB")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No games found locally or on IGDB"
+        )
 
     games: List[schemas.Game] = []
     for igdb_game in igdb_games:
@@ -307,7 +342,7 @@ def search_games(
 
 
 @router.options("/")
-async def games_options(request: Request):
+async def games_options(request: Request): # pylint: disable=W0613
     """
     Handles OPTIONS requests for the /games/ endpoint.
 
