@@ -2,7 +2,7 @@ import datetime
 import enum
 from typing import List, Optional
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, ConfigDict
 
 
 class BacklogStatus(str, enum.Enum):
@@ -244,7 +244,7 @@ class RecommendationResponse(BaseModel):
 class UserRequest(BaseModel):
     user_id: int
 
-class UserInRating(BaseModel): # A slimmed-down User schema for embedding in Rating
+class UserInRating(BaseModel):
     user_id: int
     username: str
     class Config:
@@ -258,13 +258,13 @@ class GameInRating(BaseModel):
         from_attributes = True
 
 class RatingWithUserAndGame(BaseModel):
+    model_config = ConfigDict(from_attributes=True, arbitrary_types_allowed=True)
+
     rating_id: int
     game_id: int
     user_id: int
     rating: float
     comment: Optional[str] = None
-    timestamp: datetime
+    timestamp: datetime.datetime
     user: UserInRating
     game: GameInRating
-    class Config:
-        from_attributes = True
