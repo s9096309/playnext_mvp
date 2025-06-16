@@ -172,203 +172,6 @@
             color: white;
         }
 
-    </style>
-</head>
-<body>
-    <header>
-        <div class="logo-container">
-            <img src="/static/playnext-logo.jpg" alt="PlayNext Logo" class="logo">
-            <h1>PlayNext</h1>
-        </div>
-        <nav>
-            <ul>
-                <li><a href="/static/index.html">Home</a></li>
-                <li><a href="/static/ratings.html">Ratings</a></li>
-                <li><a href="/static/about.html">About</a></li>
-                <li><a href="/static/backlog.html">Backlog</a></li>
-                <li><a href="/static/profile.html">Profile</a></li>
-                <li><span id="welcomeMessage" class="welcome-message" style="display: none;"></span></li>
-                <li><a href="/static/login.html" id="loginLink">Login</a></li>
-                <li><a href="/static/register.html" id="registerLink">Register</a></li>
-                <li><button id="logoutButton" style="display: none;">Logout</button></li>
-            </ul>
-        </nav>
-    </header>
-    <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ratings - PlayNext</title>
-    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/static/style.css">
-    <style>
-        /* ... Your existing CSS for .stars, .rating-form-container etc. ... */
-        .stars {
-            display: inline-block;
-            font-size: 1.5em;
-            color: #ddd;
-            cursor: pointer;
-            user-select: none;
-        }
-
-        .stars .star {
-            display: inline-block;
-            padding: 0 2px;
-            font-size: inherit;
-        }
-
-        .stars .star.filled {
-            color: gold;
-        }
-
-        .stars .star.hovered {
-            color: orange;
-        }
-
-        .rating-form-container select,
-        .rating-form-container textarea {
-            width: calc(100% - 22px);
-            padding: 10px;
-            margin-bottom: 10px;
-            border: 1px solid #444;
-            border-radius: 4px;
-            background-color: #2a2a2a;
-            color: #eee;
-            box-sizing: border-box;
-        }
-
-        .rating-form-container textarea {
-            resize: vertical;
-            min-height: 80px;
-        }
-
-        .rating-input .stars {
-            font-size: 2em;
-            margin-bottom: 10px;
-        }
-
-        .rating-input .star {
-            transition: color 0.2s ease-in-out;
-        }
-
-        .rating-form-container {
-            background-color: #1a1a1a;
-            border: 1px solid #333;
-            border-radius: 8px;
-            padding: 25px;
-            margin-bottom: 30px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-        }
-
-        .rating-form-container h3 {
-            color: #eee;
-            margin-top: 0;
-            margin-bottom: 20px;
-            font-size: 1.6em;
-            border-bottom: 1px solid #444;
-            padding-bottom: 10px;
-        }
-
-        #ratedGamesList table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-
-        #ratedGamesList th, #ratedGamesList td {
-            border: 1px solid #333;
-            padding: 10px;
-            text-align: left;
-            color: #eee;
-        }
-
-        #ratedGamesList th {
-            background-color: #2a2a2a;
-            font-weight: bold;
-        }
-
-        #ratedGamesList tr:nth-child(even) {
-            background-color: #1a1a1a;
-        }
-
-        #ratedGamesList tr:hover {
-            background-color: #222;
-        }
-
-        .game-cover-thumbnail {
-            width: 50px;
-            height: auto;
-            border-radius: 4px;
-            vertical-align: middle;
-            margin-right: 10px;
-        }
-
-        .stars-display .star {
-            font-size: 1.2em;
-            color: #ddd;
-        }
-
-        .stars-display .star.filled {
-            color: gold;
-        }
-
-        .action-button {
-            background-color: #007bff;
-            color: white;
-            border: none;
-            padding: 8px 12px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.9em;
-            margin-right: 5px;
-            transition: background-color 0.2s ease;
-        }
-
-        .action-button.delete-rating {
-            background-color: #dc3545;
-        }
-
-        .action-button:hover {
-            background-color: #0056b3;
-        }
-        .action-button.delete-rating:hover {
-            background-color: #c82333;
-        }
-
-        .button-container {
-            white-space: nowrap;
-        }
-
-        .empty-list {
-            text-align: center;
-            color: #ccc;
-            padding: 20px;
-        }
-
-        .message {
-            padding: 10px;
-            margin-top: 10px;
-            border-radius: 4px;
-            display: none;
-            text-align: center;
-        }
-
-        .message.success {
-            background-color: #28a745;
-            color: white;
-        }
-
-        .message.error {
-            background-color: #dc3545;
-            color: white;
-        }
-
-        .message.info {
-            background-color: #17a2b8;
-            color: white;
-        }
-
         /* New styles for game-specific display */
         #gameDetailsSection {
             background-color: #1a1a1a;
@@ -488,11 +291,10 @@
         const rateGameMessage = document.getElementById('rateGameMessage');
         const ratedGamesTableBody = document.getElementById('ratedGamesTableBody');
         const emptyRatingsMessage = document.getElementById('emptyRatingsMessage');
-        // NEW: Element for game details section
         const gameDetailsSection = document.getElementById('gameDetailsSection');
 
         let currentStarRating = 0;
-        let allUserRatings = []; // Store all ratings to easily prefill form
+        let allUserRatings = [];
 
         function showMessage(element, message, type = 'success') {
             if (element) {
@@ -542,14 +344,13 @@
         function logout() {
             localStorage.removeItem('accessToken');
             localStorage.removeItem('current_user_id');
-            // UPDATED: Use API_BASE_URL for redirection
             window.location.href = `${API_BASE_URL}/static/login.html`;
         }
 
         logoutButton.addEventListener('click', logout);
 
-        // NEW: Function to fetch and display details of a specific game
         async function fetchAndDisplayGameDetails(gameId) {
+            console.log(`Attempting to fetch details for gameId: ${gameId}`);
             try {
                 const response = await fetch(`${GAMES_ENDPOINT}/${gameId}`, {
                     method: 'GET',
@@ -559,10 +360,13 @@
                 });
 
                 if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error(`HTTP error! status: ${response.status}, detail: ${errorData.detail || response.statusText}`);
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
 
                 const game = await response.json();
+                console.log('Fetched game details:', game);
                 gameDetailsSection.innerHTML = `
                     ${game.image_url ? `<img src="${game.image_url}" alt="${game.game_name} Cover">` : ''}
                     <h2>${game.game_name}</h2>
@@ -570,16 +374,17 @@
                     <p>Platform: ${game.platform || 'N/A'}</p>
                     <p>Release Date: ${game.release_date || 'N/A'}</p>
                 `;
-                gameDetailsSection.style.display = 'block'; // Show the section
+                gameDetailsSection.style.display = 'block';
+                console.log('Game details section displayed.');
             } catch (error) {
                 console.error('Error loading game details:', error);
-                // Optionally hide the section or display an error message
                 gameDetailsSection.style.display = 'none';
-                showMessage(rateGameMessage, 'Failed to load game details for rating.', 'error');
+                showMessage(rateGameMessage, 'Failed to load game details for rating. Please try again.', 'error');
             }
         }
 
-        async function loadGamesForDropdown(preSelectGameId = null) { // Added preSelectGameId parameter
+        async function loadGamesForDropdown(preSelectGameId = null) {
+            console.log(`Loading games for dropdown. Pre-select ID: ${preSelectGameId}`);
             gameSelect.innerHTML = '<option value="">Loading games...</option>';
             try {
                 const response = await fetch(GAMES_ENDPOINT, {
@@ -590,10 +395,13 @@
                 });
 
                 if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error(`HTTP error! status: ${response.status}, detail: ${errorData.detail || response.statusText}`);
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
 
                 const games = await response.json();
+                console.log('Fetched games for dropdown:', games);
                 gameSelect.innerHTML = '<option value="">Select a Game</option>';
                 if (games.length === 0) {
                     gameSelect.innerHTML = '<option value="">No games available</option>';
@@ -601,21 +409,35 @@
                 }
                 games.forEach(game => {
                     const option = document.createElement('option');
-                    option.value = game.game_id;
+                    // Crucial Change: Ensure option value is a string
+                    option.value = String(game.game_id);
                     option.textContent = game.game_name;
                     gameSelect.appendChild(option);
                 });
 
-                // NEW: Pre-select game if preSelectGameId is provided
                 if (preSelectGameId) {
-                    gameSelect.value = preSelectGameId;
-                    gameSelect.disabled = true; // Optionally disable selection if pre-selected
+                    // Ensure preSelectGameId is also treated as a string when setting value
+                    gameSelect.value = String(preSelectGameId);
+                    console.log(`Attempted to set gameSelect.value to: ${String(preSelectGameId)}`);
+                    console.log(`Current gameSelect.value is: ${gameSelect.value}`);
+                    // Verify if the value was successfully set
+                    if (gameSelect.value === String(preSelectGameId)) {
+                        console.log('Dropdown value successfully pre-selected.');
+                        gameSelect.disabled = true;
+                    } else {
+                        console.warn(`Dropdown pre-selection failed. Value "${preSelectGameId}" not found in options.`);
+                        gameSelect.disabled = false;
+                        showMessage(rateGameMessage, `Could not pre-select game ID ${preSelectGameId} in the dropdown. Make sure it's in your game list.`, 'info');
+                    }
+                } else {
+                    gameSelect.disabled = false;
                 }
 
             } catch (error) {
-                console.error('Error loading games:', error);
+                console.error('Error loading games for dropdown:', error);
                 showMessage(rateGameMessage, 'Failed to load games for dropdown. Please try again.', 'error');
                 gameSelect.innerHTML = '<option value="">Error loading games</option>';
+                gameSelect.disabled = false;
             }
         }
 
@@ -659,7 +481,7 @@
                         ratingValueInput.value = currentStarRating;
                         backendRatingValueInput.value = convertStarsToBackendRating(currentStarRating);
 
-                        renderStars(currentStarRating, container, true);
+                        renderStars(currentStarRating, starRatingInput, true);
                     });
                 }
 
@@ -711,8 +533,8 @@
                     const ratingValueBackend = parseFloat(btn.dataset.rating);
                     const starRatingValue = parseInt(btn.dataset.starRating);
 
-                    gameSelect.value = gameId; // Set dropdown value
-                    gameSelect.disabled = true; // Disable dropdown during edit
+                    gameSelect.value = gameId;
+                    gameSelect.disabled = true;
                     commentInput.value = btn.dataset.comment;
 
                     currentStarRating = starRatingValue;
@@ -728,48 +550,33 @@
             });
         }
 
-        // NEW: Function to check if the user has rated the specific game and pre-fill form
         function prefillFormIfRated(gameId) {
-            const existingRating = allUserRatings.find(rating => rating.game_id == gameId);
+            const existingRating = allUserRatings.find(rating => String(rating.game_id) === String(gameId));
             if (existingRating) {
-                // Simulate the click of an edit button to prefill the form
-                const dummyButton = {
-                    dataset: {
-                        id: existingRating.rating_id,
-                        gameId: existingRating.game_id,
-                        gameName: existingRating.game ? existingRating.game.game_name : '',
-                        rating: existingRating.rating.toString(),
-                        comment: existingRating.comment || '',
-                        starRating: Math.ceil(existingRating.rating / 2).toString()
-                    }
+                const btnData = {
+                    id: existingRating.rating_id,
+                    gameId: existingRating.game_id,
+                    gameName: existingRating.game ? existingRating.game.game_name : '',
+                    rating: existingRating.rating.toString(),
+                    comment: existingRating.comment || '',
+                    starRating: Math.ceil(existingRating.rating / 2).toString()
                 };
-                // Call the existing edit logic
-                const e = { target: dummyButton };
-                document.querySelector('.edit-rating').dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); // Trigger click to use existing logic
-                // No, this is better: Call the logic directly without dispatching a click
-                const btn = dummyButton.dataset;
-                const ratingId = btn.id;
-                const gameIdFound = btn.gameId;
-                const gameName = btn.gameName;
-                const ratingValueBackend = parseFloat(btn.rating);
-                const starRatingValue = parseInt(btn.starRating);
 
-                gameSelect.value = gameIdFound; // Set dropdown value
-                gameSelect.disabled = true; // Disable dropdown during edit
-                commentInput.value = btn.comment;
+                gameSelect.value = String(btnData.gameId);
+                gameSelect.disabled = true;
+                commentInput.value = btnData.comment;
 
-                currentStarRating = starRatingValue;
-                ratingValueInput.value = starRatingValue;
-                backendRatingValueInput.value = ratingValueBackend;
+                currentStarRating = parseInt(btnData.starRating);
+                ratingValueInput.value = currentStarRating;
+                backendRatingValueInput.value = parseFloat(btnData.rating);
                 renderStars(currentStarRating, starRatingInput, true);
 
-                rateGameForm.setAttribute('data-rating-id', ratingId);
+                rateGameForm.setAttribute('data-rating-id', btnData.id);
                 document.getElementById('submitRatingButton').textContent = 'Update Rating';
-                showMessage(rateGameMessage, `Editing your rating for ${gameName}.`, 'info');
+                showMessage(rateGameMessage, `Editing your rating for ${btnData.gameName}.`, 'info');
 
             } else {
-                // If gameId is present in URL but not rated, just select it and clear form
-                gameSelect.value = gameId;
+                gameSelect.value = String(gameId);
                 gameSelect.disabled = true;
                 rateGameForm.removeAttribute('data-rating-id');
                 document.getElementById('submitRatingButton').textContent = 'Submit Rating';
@@ -780,7 +587,6 @@
                 renderStars(0, starRatingInput, true);
             }
         }
-
 
         async function fetchRatings() {
             const token = getAuthToken();
@@ -810,10 +616,9 @@
                     return;
                 }
 
-                allUserRatings = await response.json(); // Store all fetched ratings
+                allUserRatings = await response.json();
                 displayRatedGames(allUserRatings);
 
-                // NEW: After fetching all ratings, if a game_id is in the URL, try to pre-fill the form
                 const urlParams = new URLSearchParams(window.location.search);
                 const urlGameId = urlParams.get('game_id');
                 if (urlGameId) {
@@ -850,13 +655,13 @@
                 comment: comment || null
             };
 
-            let url = USER_RATINGS_ENDPOINT; // For POST, FastAPI will handle /users/me/ratings/
+            let url = USER_RATINGS_ENDPOINT;
             let method = 'POST';
 
             if (ratingId) {
                 url = `${USER_RATINGS_ENDPOINT}/${ratingId}`;
                 method = 'PUT';
-                delete payload.game_id; // Game ID is not sent for PUT/PATCH
+                delete payload.game_id;
             }
 
             try {
@@ -891,15 +696,14 @@
                 renderStars(0, starRatingInput, true);
                 rateGameForm.removeAttribute('data-rating-id');
                 document.getElementById('submitRatingButton').textContent = 'Submit Rating';
-                gameSelect.value = ""; // Reset dropdown
-                gameSelect.disabled = false; // Enable dropdown after submission/update
-                fetchRatings(); // Re-fetch all ratings to update the list
+                gameSelect.value = "";
+                gameSelect.disabled = false;
+                fetchRatings();
 
-                // If coming from a game_id link, clear the game details section and re-enable dropdown
                 const urlParams = new URLSearchParams(window.location.search);
                 if (urlParams.get('game_id')) {
-                    gameDetailsSection.style.display = 'none'; // Hide specific game details
-                    history.replaceState({}, document.title, window.location.pathname); // Remove game_id from URL
+                    gameDetailsSection.style.display = 'none';
+                    history.replaceState({}, document.title, window.location.pathname);
                 }
 
             } catch (error) {
@@ -939,23 +743,22 @@
                 }
 
                 showMessage(rateGameMessage, "Rating deleted successfully!", "success");
-                fetchRatings(); // Re-fetch all ratings to update the list
+                fetchRatings();
 
-                // If coming from a game_id link and this was the rating for that game, clear form/details
                 const urlParams = new URLSearchParams(window.location.search);
                 const urlGameId = urlParams.get('game_id');
                 if (urlGameId) {
-                    const deletedRatingWasForUrlGame = allUserRatings.find(r => r.rating_id == ratingId && r.game_id == urlGameId);
+                    const deletedRatingWasForUrlGame = allUserRatings.find(r => String(r.rating_id) === String(ratingId) && String(r.game_id) === String(urlGameId));
                     if (deletedRatingWasForUrlGame) {
-                        gameDetailsSection.style.display = 'none'; // Hide specific game details
-                        gameSelect.value = ''; // Clear dropdown
-                        gameSelect.disabled = false; // Enable dropdown
-                        commentInput.value = ''; // Clear comment
-                        currentStarRating = 0; // Reset stars
+                        gameDetailsSection.style.display = 'none';
+                        gameSelect.value = '';
+                        gameSelect.disabled = false;
+                        commentInput.value = '';
+                        currentStarRating = 0;
                         renderStars(0, starRatingInput, true);
                         rateGameForm.removeAttribute('data-rating-id');
                         document.getElementById('submitRatingButton').textContent = 'Submit Rating';
-                        history.replaceState({}, document.title, window.location.pathname); // Remove game_id from URL
+                        history.replaceState({}, document.title, window.location.pathname);
                     }
                 }
 
@@ -965,7 +768,7 @@
             }
         }
 
-        document.addEventListener('DOMContentLoaded', async () => { // Made async to await loadGamesForDropdown
+        document.addEventListener('DOMContentLoaded', async () => {
             checkLoginStatus();
             renderStars(currentStarRating, starRatingInput, true);
 
@@ -973,14 +776,12 @@
             const urlGameId = urlParams.get('game_id');
 
             if (urlGameId) {
-                // Fetch game details first to display on page
+                console.log(`URL contains game_id: ${urlGameId}. Fetching specific game details and pre-selecting.`);
                 await fetchAndDisplayGameDetails(urlGameId);
-                // Then load dropdown and pre-select
                 await loadGamesForDropdown(urlGameId);
-                // Fetch user's ratings (and prefill form if needed)
                 await fetchRatings();
             } else {
-                // If no game_id, just load games for dropdown and fetch all ratings
+                console.log('No game_id in URL. Loading all games for dropdown and user ratings.');
                 await loadGamesForDropdown();
                 await fetchRatings();
             }
