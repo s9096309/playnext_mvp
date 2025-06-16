@@ -13,7 +13,7 @@ from app.utils.auth import get_current_user, get_current_active_user
 from app.utils.security import hash_password
 from app.database.session import SessionDep, get_db, Session
 
-router = APIRouter(tags=["Users"])
+router = APIRouter(prefix="/users", tags=["Users"])
 
 
 @router.post("/", response_model=schemas.User)
