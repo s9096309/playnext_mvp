@@ -5,23 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PlayNext - Game Library</title>
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/playnext_mvp/static/style.css">
+    <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
     <header>
     <div class="logo-container">
-        <img src="/playnext_mvp/static/playnext-logo.jpg" alt="PlayNext Logo" class="logo">
+        <img src="/static/playnext-logo.jpg" alt="PlayNext Logo" class="logo">
         <h1>PlayNext</h1>
     </div>
     <nav>
         <ul>
-                <li><a href="/playnext_mvp/static/index.html">Home</a></li>
-                <li><a href="/playnext_mvp/static/ratings.html">Ratings</a></li>
-                <li><a href="/playnext_mvp/static/about.html">About</a></li>
-                <li><a href="/playnext_mvp/static/backlog.html">Backlog</a></li>
-                <li><a href="/playnext_mvp/static/profile.html">Profile</a></li> <li><span id="welcomeMessage" class="welcome-message" style="display: none;"></span></li>
-                <li><a href="/playnext_mvp/static/login.html" id="loginLink">Login</a></li>
-                <li><a href="/playnext_mvp/static/register.html" id="registerLink">Register</a></li>
+                <li><a href="/static/index.html">Home</a></li>
+                <li><a href="/static/ratings.html">Ratings</a></li>
+                <li><a href="/static/about.html">About</a></li>
+                <li><a href="/static/backlog.html">Backlog</a></li>
+                <li><a href="/static/profile.html">Profile</a></li> <li><span id="welcomeMessage" class="welcome-message" style="display: none;"></span></li>
+                <li><a href="/static/login.html" id="loginLink">Login</a></li>
+                <li><a href="/static/register.html" id="registerLink">Register</a></li>
                 <li><button id="logoutButton" style="display: none;">Logout</button></li>
             </ul>
     </nav>
@@ -67,18 +67,16 @@
         const registerLink = document.getElementById('registerLink');
         const welcomeMessage = document.getElementById('welcomeMessage');
 
-        // --- Helper function to display messages ---
         function showMessage(element, message, type = 'success') {
             element.textContent = message;
-            element.className = 'message'; // Reset classes
+            element.className = 'message';
             element.classList.add(type);
             element.style.display = 'block';
             setTimeout(() => {
                 element.style.display = 'none';
-            }, 5000); // Hide after 5 seconds
+            }, 5000);
         }
 
-        // --- Token Handling ---
         function getAccessToken() {
             return localStorage.getItem('accessToken');
         }
@@ -86,7 +84,6 @@
         function checkLoginStatus() {
             const token = getAccessToken();
             if (token) {
-                // Decode token to get username (simple client-side decode, not secure for auth)
                 try {
                     const base64Url = token.split('.')[1];
                     const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
@@ -94,14 +91,13 @@
                         return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
                     }).join(''));
                     const payload = JSON.parse(jsonPayload);
-                    welcomeMessage.textContent = `Welcome, ${payload.sub}!`; // 'sub' is standard for username
-                    welcomeMessage.style.display = 'inline'; // Show welcome message
-                    logoutButton.style.display = 'inline'; // Show logout button
-                    loginLink.style.display = 'none'; // Hide login link
-                    registerLink.style.display = 'none'; // Hide register link
+                    welcomeMessage.textContent = `Welcome, ${payload.sub}!`;
+                    welcomeMessage.style.display = 'inline';
+                    logoutButton.style.display = 'inline';
+                    loginLink.style.display = 'none';
+                    registerLink.style.display = 'none';
                 } catch (e) {
                     console.error("Failed to decode token:", e);
-                    // If token is invalid, treat as logged out
                     logout();
                 }
                 return true;
@@ -116,16 +112,15 @@
 
         function logout() {
             localStorage.removeItem('accessToken');
-            checkLoginStatus(); // Update UI
-            window.location.href = '/playnext_mvp/static/login.html'; // Redirect to login
+            checkLoginStatus();
+            window.location.href = '/static/login.html';
         }
 
         logoutButton.addEventListener('click', logout);
 
 
-        // --- Display Games ---
         function displayGames(games) {
-            gamesTableBody.innerHTML = ''; // Clear existing rows
+            gamesTableBody.innerHTML = '';
             if (games.length === 0) {
                 emptyListMessage.style.display = 'block';
                 return;
@@ -149,7 +144,6 @@
                         <button class="action-button delete-game" data-id="${game.game_id}">Delete</button>
                     </td>
                 `;
-                // Add event listeners for action buttons
                 row.querySelector('.view-ratings').addEventListener('click', () => alert(`Viewing ratings for ${game.game_name}`));
                 row.querySelector('.add-to-backlog').addEventListener('click', () => alert(`Adding ${game.game_name} to backlog`));
                 row.querySelector('.edit-game').addEventListener('click', () => alert(`Editing ${game.game_name}`));
@@ -157,13 +151,11 @@
             });
         }
 
-        // --- Fetch Games ---
         async function fetchGames() {
             const token = getAccessToken();
             if (!token) {
-                // If not logged in, only show empty message or redirect
                 emptyListMessage.style.display = 'block';
-                gamesTableBody.innerHTML = ''; // Clear table
+                gamesTableBody.innerHTML = '';
                 return;
             }
 
@@ -179,7 +171,7 @@
                 if (!response.ok) {
                     if (response.status === 401) {
                         showMessage(addGameMessage, "Session expired or unauthorized. Please log in.", "error");
-                        logout(); // Force logout if token is invalid
+                        logout();
                     } else {
                         const errorData = await response.json();
                         showMessage(addGameMessage, `Failed to fetch games: ${errorData.detail || response.statusText}`, "error");
@@ -196,7 +188,6 @@
             }
         }
 
-        // --- Add Game ---
         addGameForm.addEventListener('submit', async (event) => {
             event.preventDefault();
             const token = getAccessToken();
@@ -205,8 +196,6 @@
                 return;
             }
 
-            // Get the game name from the input field.
-            // We'll call it 'title' here to match your backend's Query parameter.
             const title = document.getElementById('game_name').value.trim();
 
             if (!title) {
@@ -215,14 +204,12 @@
             }
 
             try {
-                // Send 'title' as a query parameter, not in the request body.
                 const response = await fetch(`${API_BASE_URL}/games/?title=${encodeURIComponent(title)}`, {
                     method: 'POST',
                     headers: {
                         'Accept': 'application/json',
                         'Authorization': `Bearer ${token}`
                     },
-                    // No 'Content-Type' or 'body' needed for a POST with query parameters
                 });
 
                 if (!response.ok) {
@@ -233,14 +220,13 @@
 
                 showMessage(addGameMessage, "Game added successfully!", "success");
                 addGameForm.reset();
-                fetchGames(); // Refresh the list of games
+                fetchGames();
             } catch (error) {
                 console.error('Error adding game:', error);
                 showMessage(addGameMessage, `An unexpected error occurred: ${error.message}`, "error");
             }
         });
 
-        // --- Delete Game ---
         async function deleteGame(gameId) {
             if (!confirm("Are you sure you want to delete this game?")) {
                 return;
@@ -267,14 +253,13 @@
                 }
 
                 showMessage(addGameMessage, "Game deleted successfully!", "success");
-                fetchGames(); // Refresh the list
+                fetchGames();
             } catch (error) {
-                console.error('Error deleting game:', error);
-                showMessage(addGameMessage, `An unexpected error occurred: ${error.message}`, "error");
+                    console.error('Error deleting game:', error);
+                    showMessage(addGameMessage, `An unexpected error occurred: ${error.message}`, "error");
             }
         }
 
-        // --- Initial Load ---
         document.addEventListener('DOMContentLoaded', () => {
             checkLoginStatus();
             fetchGames();

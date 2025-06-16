@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PlayNext - User Profile</title>
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/playnext_mvp/static/style.css"> <style>
+    <link rel="stylesheet" href="/static/style.css"> <style>
         /* Basic styling for the profile content to make it look cohesive */
         .container {
             max-width: 960px;
@@ -118,19 +118,19 @@
 <body>
     <header>
         <div class="logo-container">
-            <img src="/playnext_mvp/static/playnext-logo.jpg" alt="PlayNext Logo" class="logo">
+            <img src="/static/playnext-logo.jpg" alt="PlayNext Logo" class="logo">
             <h1>PlayNext</h1>
         </div>
         <nav>
             <ul>
-                <li><a href="/playnext_mvp/static/index.html">Home</a></li>
-                <li><a href="/playnext_mvp/static/ratings.html">Ratings</a></li>
-                <li><a href="/playnext_mvp/static/about.html">About</a></li>
-                <li><a href="/playnext_mvp/static/backlog.html">Backlog</a></li>
-                <li><a href="/playnext_mvp/static/profile.html">Profile</a></li>
+                <li><a href="/static/index.html">Home</a></li>
+                <li><a href="/static/ratings.html">Ratings</a></li>
+                <li><a href="/static/about.html">About</a></li>
+                <li><a href="/static/backlog.html">Backlog</a></li>
+                <li><a href="/static/profile.html">Profile</a></li>
                 <li><span id="welcomeMessage" class="welcome-message" style="display: none;"></span></li>
-                <li><a href="/playnext_mvp/static/login.html" id="loginLink">Login</a></li>
-                <li><a href="/playnext_mvp/static/register.html" id="registerLink">Register</a></li>
+                <li><a href="/static/login.html" id="loginLink">Login</a></li>
+                <li><a href="/static/register.html" id="registerLink">Register</a></li>
                 <li><button id="logoutButton" style="display: none;">Logout</button></li>
             </ul>
         </nav>
@@ -159,7 +159,7 @@
     </main>
 
     <script>
-        const API_BASE_URL = 'http://127.0.0.1:8000'; // Define API base URL consistently
+        const API_BASE_URL = 'http://127.0.0.1:8000';
 
         const logoutButton = document.getElementById('logoutButton');
         const loginLink = document.getElementById('loginLink');
@@ -167,7 +167,6 @@
         const welcomeMessage = document.getElementById('welcomeMessage');
 
         function getAccessToken() {
-            // Ensure this matches where your login page stores the token
             return localStorage.getItem('accessToken');
         }
 
@@ -203,19 +202,18 @@
         function logout() {
             localStorage.removeItem('accessToken');
             checkLoginStatus();
-            window.location.href = '/playnext_mvp/static/login.html';
+            window.location.href = '/static/login.html';
         }
 
-        if (logoutButton) { // Check if button exists to avoid errors on pages without it
+        if (logoutButton) {
             logoutButton.addEventListener('click', logout);
         }
 
         document.addEventListener('DOMContentLoaded', () => {
             checkLoginStatus();
-            // Call page-specific functions here
         });
 
     </script>
-    <script src="/playnext_mvp/static/js/recommendations.js"></script>
+    <script src="/static/js/recommendations.js"></script>
 </body>
 </html>

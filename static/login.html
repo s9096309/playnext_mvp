@@ -5,23 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - PlayNext</title>
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/playnext_mvp/static/style.css">
+    <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
     <header>
         <div class="logo-container">
-            <img src="/playnext_mvp/static/playnext-logo.jpg" alt="PlayNext Logo" class="logo">
+            <img src="/static/playnext-logo.jpg" alt="PlayNext Logo" class="logo">
             <h1>PlayNext</h1>
         </div>
         <nav>
             <ul>
-                <li><a href="/playnext_mvp/static/index.html">Home</a></li>
-                <li><a href="/playnext_mvp/static/ratings.html">Ratings</a></li>
-                <li><a href="/playnext_mvp/static/about.html">About</a></li>
-                <li><a href="/playnext_mvp/static/backlog.html">Backlog</a></li>
+                <li><a href="/static/index.html">Home</a></li>
+                <li><a href="/static/ratings.html">Ratings</a></li>
+                <li><a href="/static/about.html">About</a></li>
+                <li><a href="/static/backlog.html">Backlog</a></li>
                 <li><span id="welcomeMessage" class="welcome-message" style="display: none;"></span></li>
-                <li><a href="/playnext_mvp/static/login.html" id="loginLink">Login</a></li>
-                <li><a href="/playnext_mvp/static/register.html" id="registerLink">Register</a></li>
+                <li><a href="/static/login.html" id="loginLink">Login</a></li>
+                <li><a href="/static/register.html" id="registerLink">Register</a></li>
                 <li><button id="logoutButton" style="display: none;">Logout</button></li>
             </ul>
         </nav>
@@ -43,7 +43,7 @@
             <div id="loginMessage" class="message"></div>
         </form>
         <div class="form-footer">
-            Don't have an account? <a href="/playnext_mvp/static/register.html">Register here</a>
+            Don't have an account? <a href="/static/register.html">Register here</a>
         </div>
     </div>
 
@@ -52,29 +52,25 @@
         const loginForm = document.getElementById('loginForm');
         const loginMessage = document.getElementById('loginMessage');
 
-        // NEW: Grab header elements for common JS functions
         const logoutButton = document.getElementById('logoutButton');
         const loginLink = document.getElementById('loginLink');
         const registerLink = document.getElementById('registerLink');
         const welcomeMessage = document.getElementById('welcomeMessage');
-        // This 'addGameMessage' isn't directly used here, but is a common element for the showMessage function
         const addGameMessage = document.getElementById('addGameMessage');
 
 
-        // Common helper function (copied from index.html)
         function showMessage(element, message, type = 'success') {
-            if (element) { // Add a check to prevent errors if element doesn't exist on all pages
+            if (element) {
                 element.textContent = message;
-                element.className = 'message'; // Reset classes
+                element.className = 'message';
                 element.classList.add(type);
                 element.style.display = 'block';
                 setTimeout(() => {
                     element.style.display = 'none';
-                }, 5000); // Hide after 5 seconds
+                }, 5000);
             }
         }
 
-        // Common authentication status check (copied from index.html)
         function getAccessToken() {
             return localStorage.getItem('accessToken');
         }
@@ -92,35 +88,33 @@
                     welcomeMessage.textContent = `Welcome, ${payload.sub}!`;
                     welcomeMessage.style.display = 'inline';
                     logoutButton.style.display = 'inline';
-                    loginLink.style.display = 'none'; // Hide login link when logged in
-                    registerLink.style.display = 'none'; // Hide register link when logged in
+                    loginLink.style.display = 'none';
+                    registerLink.style.display = 'none';
                 } catch (e) {
                     console.error("Failed to decode token:", e);
-                    logout(); // Force logout if token is invalid
+                    logout();
                 }
                 return true;
             } else {
                 welcomeMessage.style.display = 'none';
                 logoutButton.style.display = 'none';
-                loginLink.style.display = 'inline'; // Show login link when logged out
-                registerLink.style.display = 'inline'; // Show register link when logged out
+                loginLink.style.display = 'inline';
+                    registerLink.style.display = 'inline';
                 return false;
             }
         }
 
-        // Common logout function (copied from index.html)
         function logout() {
             localStorage.removeItem('accessToken');
-            checkLoginStatus(); // Update UI after logout
-            window.location.href = '/playnext_mvp/static/login.html'; // Redirect to login page
+            checkLoginStatus();
+            window.location.href = '/static/login.html';
         }
 
-        // Attach logout event listener (needs to be done on every page)
         logoutButton.addEventListener('click', logout);
 
 
         loginForm.addEventListener('submit', async (event) => {
-            event.preventDefault(); // Prevent default form submission
+            event.preventDefault();
 
             const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
@@ -130,7 +124,6 @@
                 return;
             }
 
-            // Note: For /auth/token, the body needs to be FormData, not JSON.
             const formData = new URLSearchParams();
             formData.append('username', username);
             formData.append('password', password);
@@ -140,7 +133,7 @@
                     method: 'POST',
                     headers: {
                         'Accept': 'application/json',
-                        'Content-Type': 'application/x-www-form-urlencoded' // Crucial for /auth/token
+                        'Content-Type': 'application/x-www-form-urlencoded'
                     },
                     body: formData
                 });
@@ -154,15 +147,13 @@
                 const tokenData = await response.json();
                 const accessToken = tokenData.access_token;
 
-                // Store the token in localStorage
                 localStorage.setItem('accessToken', accessToken);
                 showMessage(loginMessage, "Login successful! Redirecting...", "success");
 
-                // Clear the form and redirect to the main page or a user dashboard
                 loginForm.reset();
                 setTimeout(() => {
-                    window.location.href = '/playnext_mvp/static/index.html';
-                }, 2000); // Redirect after 2 seconds
+                    window.location.href = '/static/index.html';
+                }, 2000);
 
             } catch (error) {
                 console.error('Error during login:', error);
@@ -170,7 +161,6 @@
             }
         });
 
-        // Call checkLoginStatus on page load to update header elements
         document.addEventListener('DOMContentLoaded', checkLoginStatus);
     </script>
 </body>
