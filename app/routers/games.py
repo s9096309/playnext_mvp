@@ -1,14 +1,6 @@
 # app/routers/games.py
 
-"""
-API routes for managing game information.
-
-This module provides endpoints to create, retrieve, update, and delete game entries.
-It integrates with the IGDB API to fetch game details during creation and search,
-and handles data persistence in the local database.
-"""
-
-from datetime import datetime
+import datetime
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
@@ -32,20 +24,25 @@ def _process_igdb_game_data(igdb_game: dict) -> schemas.GameCreate:
 
     age_rating: Optional[str] = None
     if 'age_ratings' in igdb_game and igdb_game['age_ratings']:
-        mapped_ratings = [igdb_utils.map_igdb_age_rating(rating['rating'])
-                          for rating in igdb_game['age_ratings']]
+        mapped_ratings = [
+            igdb_utils.map_igdb_age_rating(rating['rating'])
+            for rating in igdb_utils.get_age_ratings(igdb_game['age_ratings'])
+        ]
         valid_ratings = [rating for rating in mapped_ratings if rating is not None]
         if valid_ratings:
             age_rating = max(valid_ratings)
 
-    release_date = datetime(2000, 1, 1).date()
+    release_date = datetime.datetime(2000, 1, 1).date()
     if 'release_dates' in igdb_game and igdb_game['release_dates']:
         release_date_str = igdb_game['release_dates'][0].get('human')
         if release_date_str:
             try:
-                release_date = datetime.strptime(release_date_str, "%b %d, %Y").date()
+                release_date = datetime.datetime.strptime(release_date_str, "%b %d, %Y").date()
             except ValueError:
-                print(f"Warning: Could not parse release date for {igdb_game.get('name')}: {release_date_str}")
+                print(
+                    f"Warning: Could not parse release date for "
+                    f"{igdb_game.get('name')}: {release_date_str}"
+                )
 
     return schemas.GameCreate(
         game_name=igdb_game.get('name', "Unknown Game"),
@@ -97,7 +94,6 @@ def create_game(
     if not igdb_games:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Game not found on IGDB")
 
-    # Take the first and most relevant result from IGDB search
     igdb_game_data = igdb_games[0]
     igdb_id = igdb_game_data.get('id')
 
@@ -113,7 +109,9 @@ def create_game(
 def read_games(
     skip: int = 0,
     limit: int = 100,
-    sort_by: Optional[str] = Query(None, description="Sort games by 'game_name', 'release_date', or 'age_rating'"),
+    sort_by: Optional[str] = Query(
+        None, description="Sort games by 'game_name', 'release_date', or 'age_rating'"
+    ),
     genre: Optional[str] = Query(None, description="Filter games by genre"),
     platform: Optional[str] = Query(None, description="Filter games by platform"),
     db: Session = Depends(get_db)
@@ -133,14 +131,37 @@ def read_games(
     Returns:
         List[schemas.Game]: A list of game objects.
     """
-    # Ensure image_url is not None for response model consistency
     games = crud.get_games(db, skip=skip, limit=limit, sort_by=sort_by, genre=genre, platform=platform)
     for game in games:
         if game.image_url is None:
             game.image_url = ""
     return games
 
-# --- NEW ENDPOINT FOR ALL RATINGS FOR A SPECIFIC GAME ---
+
+@router.get("/{igdb_id}", response_model=schemas.Game)
+def get_game_by_igdb_id(
+    igdb_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Retrieve details for a single game by its IGDB ID.
+
+    Args:
+        igdb_id (int): The IGDB ID of the game.
+        db (Session): The database session.
+
+    Returns:
+        schemas.Game: The game object.
+
+    Raises:
+        HTTPException: 404 Not Found: If the game is not found.
+    """
+    game = db.query(models.Game).filter(models.Game.game_id == igdb_id).first()
+    if not game:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Game not found")
+    return game
+
+
 @router.get("/{game_id}/ratings", response_model=List[schemas.RatingWithUserAndGame])
 async def get_all_ratings_for_game(
     game_id: int,
@@ -148,20 +169,28 @@ async def get_all_ratings_for_game(
 ):
     """
     Retrieve all ratings for a specific game, including the rating user's details and game details.
+
+    Args:
+        game_id (int): The internal database ID of the game.
+        db (Session): The database session.
+
+    Returns:
+        List[schemas.RatingWithUserAndGame]: A list of rating objects with user and game details.
+
+    Raises:
+        HTTPException: 404 Not Found: If the game is not found.
     """
-    # Check if the game exists (optional but good practice)
     game = db.query(models.Game).filter(models.Game.game_id == game_id).first()
     if not game:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Game not found")
 
-    # Fetch ratings for the game, eager-loading user and game details
     ratings = db.query(models.Rating).options(
-        joinedload(models.Rating.user), # Eagerly load the user who made the rating
-        joinedload(models.Rating.game)  # Eagerly load the game details
+        joinedload(models.Rating.user),
+        joinedload(models.Rating.game)
     ).filter(models.Rating.game_id == game_id).all()
 
-    # If no ratings are found, return an empty list (which matches response_model)
     return ratings
+
 
 @router.put("/{game_id}", response_model=schemas.Game)
 def update_game(
@@ -264,7 +293,6 @@ def search_games(
     if db_games:
         return db_games
 
-    # If not found in DB, search IGDB and add to DB
     igdb_games = igdb_utils.search_games_igdb(query_str)
     if not igdb_games:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No games found locally or on IGDB")
@@ -272,7 +300,6 @@ def search_games(
     games: List[schemas.Game] = []
     for igdb_game in igdb_games:
         game_data = _process_igdb_game_data(igdb_game)
-        # This function creates if not exists and returns the DB object
         db_game = crud.create_game_if_not_exists(db=db, game=game_data)
         games.append(db_game)
 
@@ -280,7 +307,7 @@ def search_games(
 
 
 @router.options("/")
-async def games_options(request: Request): # pylint: disable=W0613
+async def games_options(request: Request):
     """
     Handles OPTIONS requests for the /games/ endpoint.
 
