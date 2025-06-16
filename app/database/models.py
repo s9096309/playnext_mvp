@@ -1,13 +1,27 @@
-# app/database/models.py
+"""
+SQLAlchemy ORM models for the PlayNext application.
+
+This module defines the database schema and relationships between tables
+for users, games, recommendations, ratings, and user backlogs.
+"""
 
 from datetime import datetime, UTC
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Float, Text, Boolean, BigInteger
+from sqlalchemy import (
+    Column, Integer, String, ForeignKey, DateTime, Float, Text, Boolean
+)
 from sqlalchemy.orm import relationship
 
 from .session import Base
 
 
 class User(Base):
+    """
+    SQLAlchemy model for the 'users' table.
+
+    Represents a user in the system with authentication details,
+    profile information, and relationships to their recommendations,
+    ratings, and backlog entries.
+    """
     __tablename__ = "users"
 
     user_id = Column(Integer, primary_key=True, index=True)
@@ -28,9 +42,14 @@ class User(Base):
         return f"<User(username='{self.username}', email='{self.email}')>"
 
 
-
-
 class Game(Base):
+    """
+    SQLAlchemy model for the 'games' table.
+
+    Stores information about individual games, including their IGDB details
+    and relationships to user-generated data like recommendations, ratings,
+    and backlog entries.
+    """
     __tablename__ = "games"
     game_id = Column(Integer, primary_key=True, index=True)
     game_name = Column(String, unique=True, index=True, nullable=False)
@@ -60,6 +79,12 @@ class Game(Base):
 
 
 class Recommendation(Base):
+    """
+    SQLAlchemy model for the 'recommendations' table.
+
+    Represents a game recommendation generated for a user, including
+    the reason, documentation rating, and raw/structured AI output.
+    """
     __tablename__ = "recommendations"
     recommendation_id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)
@@ -75,6 +100,11 @@ class Recommendation(Base):
 
 
 class Rating(Base):
+    """
+    SQLAlchemy model for the 'ratings' table.
+
+    Stores user-provided ratings and optional comments for games.
+    """
     __tablename__ = "ratings"
     rating_id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)
@@ -89,6 +119,12 @@ class Rating(Base):
 
 
 class Backlog(Base):
+    """
+    SQLAlchemy model for the 'backlog' table.
+
+    Represents a game in a user's personal backlog, indicating its
+    status (e.g., 'Playing', 'Completed', 'Plan to Play').
+    """
     __tablename__ = "backlog"
     backlog_id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)

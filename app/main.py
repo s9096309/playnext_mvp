@@ -1,17 +1,23 @@
+"""
+Main application entry point for the PlayNext API.
+
+This module initializes the FastAPI application, includes routers,
+mounts static files, configures CORS, and handles database table creation
+on application startup.
+"""
+
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.staticfiles import StaticFiles
 
-from app.database import crud, models
-from app.database.session import create_tables, get_db
+from app.database.session import create_tables
 from app.routers import auth, backlog_items, games, recommendations, users, ratings
 
 
-# Event handler for application startup and shutdown
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(_app: FastAPI):
     """
     Context manager for application startup and shutdown events.
 
