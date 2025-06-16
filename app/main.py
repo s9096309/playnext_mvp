@@ -29,8 +29,7 @@ app = FastAPI(
     title="PlayNext API",
     description="API for managing game backlogs, ratings, and recommendations.",
     version="0.1.0",
-    lifespan=lifespan,
-    root_path="/playnext_mvp" # <-- ADD THIS LINE
+    lifespan=lifespan
 )
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
