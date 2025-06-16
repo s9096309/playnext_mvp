@@ -28,6 +28,6 @@ services:
       # However, it's generally cleaner to define DATABASE_URL in the app's .env.
       # Assuming DATABASE_URL will be in your app's .env or it will be derived from PG environment vars.
       # If not, you can define it like this:
-      DATABASE_URL: postgresql://kevinhoffmann:${POSTGRES_PASSWORD}@db:5432/playnext_db
+      # DATABASE_URL: postgresql://kevinhoffmann:${POSTGRES_PASSWORD}@db:5432/playnext_db
 volumes:
   pgdata:
