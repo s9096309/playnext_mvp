@@ -1,5 +1,3 @@
-# app/main.py
-
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -8,7 +6,7 @@ from starlette.staticfiles import StaticFiles
 
 from app.database import crud, models
 from app.database.session import create_tables, get_db
-from app.routers import auth, backlog_items, games, recommendations, users
+from app.routers import auth, backlog_items, games, recommendations, users, ratings
 
 
 # Event handler for application startup and shutdown
@@ -45,10 +43,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 app.include_router(auth.router, tags=["Auth"])
 
 app.include_router(users.router, tags=["Users"])
+
+app.include_router(ratings.router, prefix="/users/me/ratings", tags=["Ratings"])
 
 app.include_router(games.router, tags=["Games"])
 app.include_router(backlog_items.router, tags=["Backlog"])

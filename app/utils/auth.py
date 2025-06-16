@@ -1,16 +1,16 @@
+# app/utils/auth.py
+
 import jwt
 from datetime import datetime, timedelta, UTC
 from fastapi import HTTPException, status, Depends
 from passlib.context import CryptContext
 import os
 from sqlalchemy.orm import Session
-
-# Import user_crud instead of crud for user-specific operations
 from app.database import user_crud, models
 from app.database.session import get_db
 from fastapi.security import OAuth2PasswordBearer
 
-SECRET_KEY = os.getenv("SECRET_KEY")
+SECRET_KEY = os.getenv("SECRET_KEY", "your-default-secret-key-for-testing-only-make-it-long-and-random") # <-- CHANGE HERE
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
@@ -40,6 +40,9 @@ def get_password_hash(password):
 
 def decode_access_token(token: str):
     try:
+        # Ensure SECRET_KEY is not None before attempting decode
+        if SECRET_KEY is None:
+            raise ValueError("SECRET_KEY is not set.") # Or another appropriate error
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         return payload
     except jwt.ExpiredSignatureError:
@@ -54,7 +57,12 @@ def decode_access_token(token: str):
             detail="Invalid token",
             headers={"WWW-Authenticate": "Bearer"},
         )
-
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Server configuration error: {e}",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     payload = decode_access_token(token)
@@ -71,7 +79,6 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
 
 def get_current_active_user(current_user: models.User = Depends(get_current_user)) -> models.User:
     """Dependency to get the current active authenticated user."""
-    # Add any checks for active status if applicable (e.g., is_active flag on your User model)
     return current_user
 
 

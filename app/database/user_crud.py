@@ -1,7 +1,7 @@
 # app/database/user_crud.py
 import uuid
 from typing import List, Optional
-from datetime import datetime, timezone # Added timezone import
+from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from sqlalchemy import desc, asc, and_
 from app.utils.auth import get_password_hash
@@ -56,11 +56,11 @@ def update_user(db: Session, user_id: int, user_update: schemas.UserUpdate) -> O
     if not db_user:
         return None
 
-    update_data = user_update.model_dump(exclude_unset=True) # Using model_dump for Pydantic v2
+    update_data = user_update.model_dump(exclude_unset=True)
 
     for key, value in update_data.items():
-        if key == "password": # Handle password hashing for updates
-            setattr(db_user, "password_hash", get_password_hash(value))
+        if key == "password":
+            setattr(db_user, "hashed_password", get_password_hash(value))
         else:
             setattr(db_user, key, value)
 
@@ -78,9 +78,10 @@ def delete_user(db: Session, user_id: int) -> Optional[models.User]:
     return db_user
 
 
+
 def get_user_backlog(db: Session, user_id: int) -> List[models.Backlog]:
     """Retrieve all backlog items for a specific user."""
-    return db.query(models.BacklogItem).filter(models.BacklogItem.user_id == user_id).all()
+    return db.query(models.Backlog).filter(models.Backlog.user_id == user_id).all()
 
 
 def get_ratings_by_user(db: Session, user_id: int) -> List[models.Rating]:
@@ -105,7 +106,7 @@ def get_user_recommendations(db: Session, user_id: int, limit: int = 10) -> List
     """
     user_ratings = db.query(models.Rating).filter(models.Rating.user_id == user_id).order_by(
         desc(models.Rating.rating)).limit(5).all()
-    user_backlog = db.query(models.BacklogItem).filter(models.BacklogItem.user_id == user_id).all()
+    user_backlog = db.query(models.Backlog).filter(models.Backlog.user_id == user_id).all()
 
     recommended_games_set = set()
     seen_game_ids = {rating.game_id for rating in user_ratings} | \
@@ -128,7 +129,7 @@ def get_user_recommendations(db: Session, user_id: int, limit: int = 10) -> List
 
     return list(recommended_games_set)[:limit]
 
-def get_rating_by_user_and_game(db: Session, user_id: uuid.UUID, game_id: int):
+def get_rating_by_user_and_game(db: Session, user_id: int, game_id: int):
     """
     Retrieves a single rating by user_id and game_id.
     """
