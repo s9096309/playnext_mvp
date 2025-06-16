@@ -17,7 +17,7 @@ def test_get_user(db_session: Session):
     user_data = schemas.UserCreateDB(
         username="getuser_crud_test",
         email="getuser_crud@example.com",
-        password_hash="somehash_crud",
+        hashed_password="somehash_crud",
         user_age=30,
         is_admin=False,
         registration_date=datetime.now(UTC)
@@ -33,7 +33,7 @@ def test_get_user_by_username(db_session: Session):
     user_data = schemas.UserCreateDB(
         username="findme_crud_test",
         email="find_crud_test@example.com",
-        password_hash="anotherhash_crud",
+        hashed_password="anotherhash_crud",
         user_age=40,
         is_admin=True,
         registration_date=datetime.now(UTC)
@@ -50,7 +50,7 @@ def test_get_user_by_email(db_session: Session):
     user_data = schemas.UserCreateDB(
         username="emailuser_crud_test",
         email="email_crud_test@example.com",
-        password_hash="emailhash_crud",
+        hashed_password="emailhash_crud",
         user_age=25,
         is_admin=False,
         registration_date=datetime.now(UTC)
@@ -64,7 +64,8 @@ def test_get_user_by_email(db_session: Session):
 def test_create_user_crud(db_session: Session):
     db = db_session
     user_data = schemas.UserCreateDB(username="new_user_crud", email="new_crud@example.com",
-                                     password_hash="hashedpassword", registration_date=datetime.now(UTC), user_age=20,
+                                     hashed_password="hashedpassword",
+                                     registration_date=datetime.now(UTC), user_age=20,
                                      is_admin=False)
     db_user = user_crud.create_user(db=db, user=user_data)
     assert db_user.user_id is not None
@@ -75,18 +76,20 @@ def test_create_user_crud(db_session: Session):
 def test_get_users(db_session: Session):
     db = db_session
     user_crud.create_user(db=db, user=schemas.UserCreateDB(username="listuser1", email="list1@example.com",
-                                                           password_hash="hash1", registration_date=datetime.now(UTC),
+                                                           hashed_password="hash1",
+                                                           registration_date=datetime.now(UTC),
                                                            user_age=20, is_admin=False))
     user_crud.create_user(db=db, user=schemas.UserCreateDB(username="listuser2", email="list2@example.com",
-                                                           password_hash="hash2", registration_date=datetime.now(UTC),
+                                                           hashed_password="hash2",
+                                                           registration_date=datetime.now(UTC),
                                                            user_age=25, is_admin=True))
     users = user_crud.get_users(db)
-    assert len(users) >= 2  # Ensure at least the two created users are returned
+    assert len(users) >= 2
 
 
 def test_update_user(db_session: Session):
     db = db_session
-    user_data = schemas.UserCreateDB(username="old_name", email="old@example.com", password_hash="oldhash",
+    user_data = schemas.UserCreateDB(username="old_name", email="old@example.com", hashed_password="oldhash",
                                      registration_date=datetime.now(UTC), user_age=20, is_admin=False)
     db_user = user_crud.create_user(db=db, user=user_data)
     update_data = schemas.UserUpdate(username="new_name", email="new@example.com", user_age=25, is_admin=True)
@@ -99,7 +102,7 @@ def test_update_user(db_session: Session):
 
 def test_delete_user(db_session: Session):
     db = db_session
-    user_data = schemas.UserCreateDB(username="todelete", email="todelete@example.com", password_hash="deletehash",
+    user_data = schemas.UserCreateDB(username="todelete", email="todelete@example.com", hashed_password="deletehash",
                                      registration_date=datetime.now(UTC), user_age=30, is_admin=False)
     db_user = user_crud.create_user(db=db, user=user_data)
     deleted_user = user_crud.delete_user(db, user_id=db_user.user_id)
@@ -131,7 +134,7 @@ def test_get_game(db_session: Session):
 
 def test_get_game_by_name(db_session: Session):
     db = db_session
-    game_name = "The Witcher 3: Wild Hunt (Test)"  # Exact name used for creation
+    game_name = "The Witcher 3: Wild Hunt (Test)"
     game_data = schemas.GameCreate(game_name=game_name, genre="RPG", release_date=date(2015, 5, 19), platform="PC",
                                    igdb_id=3000)
     crud.create_game(db=db, game=game_data)
@@ -183,7 +186,7 @@ def test_create_rating(db_session: Session):
         game_id=game.game_id,
         rating=4.5,
         comment="Great game!",
-        rating_date=datetime.now(UTC)
+        rating_date=datetime.now(UTC).replace(tzinfo=None)  # Ensure naive datetime for DB
     )
     db_rating = crud.create_rating(db=db, rating=rating_data)
     assert db_rating.rating_id is not None
@@ -200,7 +203,7 @@ def test_get_rating(db_session: Session):
         game_id=game.game_id,
         rating=3.0,
         comment="Decent.",
-        rating_date=datetime.now(UTC)
+        rating_date=datetime.now(UTC).replace(tzinfo=None)  # Ensure naive datetime for DB
     )
     db_rating = crud.create_rating(db=db, rating=rating_data)
     retrieved_rating = crud.get_rating(db, rating_id=db_rating.rating_id)
@@ -214,12 +217,15 @@ def test_get_ratings_by_user(db_session: Session):
     game1 = create_test_game(db, game_name="User Rated Game 1")
     game2 = create_test_game(db, game_name="User Rated Game 2")
     crud.create_rating(db=db, rating=schemas.RatingCreate(user_id=user.user_id, game_id=game1.game_id, rating=5,
-                                                          comment="Amazing", rating_date=datetime.now(UTC)))
+                                                          comment="Amazing",
+                                                          rating_date=datetime.now(UTC).replace(tzinfo=None)))
     crud.create_rating(db=db, rating=schemas.RatingCreate(user_id=user.user_id, game_id=game2.game_id, rating=4,
-                                                          comment="Good", rating_date=datetime.now(UTC)))
+                                                          comment="Good",
+                                                          rating_date=datetime.now(UTC).replace(tzinfo=None)))
     other_user, _ = create_test_user(db, username="other_user_ratings", email="other_ur@example.com")
     crud.create_rating(db=db, rating=schemas.RatingCreate(user_id=other_user.user_id, game_id=game1.game_id, rating=2,
-                                                          comment="Okay", rating_date=datetime.now(UTC)))
+                                                          comment="Okay",
+                                                          rating_date=datetime.now(UTC).replace(tzinfo=None)))
     ratings = user_crud.get_ratings_by_user(db, user_id=user.user_id)
     assert len(ratings) == 2
     assert all(r.user_id == user.user_id for r in ratings)
@@ -228,7 +234,8 @@ def test_get_ratings_by_user(db_session: Session):
 def test_get_ratings_with_comments_by_user(db_session: Session):
     db = db_session
     user_data = schemas.UserCreateDB(username="user_comments_specific", email="uc_specific@example.com",
-                                     password_hash="hash", registration_date=datetime.now(UTC), user_age=35,
+                                     hashed_password="hash",
+                                     registration_date=datetime.now(UTC), user_age=35,
                                      is_admin=False)
     user = user_crud.create_user(db=db, user=user_data)
     game1_data = schemas.GameCreate(game_name="Commented Game 1", genre="Strategy", release_date=date(2023, 1, 1),
@@ -238,13 +245,15 @@ def test_get_ratings_with_comments_by_user(db_session: Session):
                                     platform="PC", igdb_id=uuid.uuid4().int % (10 ** 9))
     game2 = crud.create_game(db=db, game=game2_data)
     crud.create_rating(db=db, rating=schemas.RatingCreate(user_id=user.user_id, game_id=game1.game_id, rating=3,
-                                                          comment="A test comment", rating_date=datetime.now(UTC)))
+                                                          comment="A test comment",
+                                                          rating_date=datetime.now(UTC).replace(tzinfo=None)))
     crud.create_rating(db=db,
                        rating=schemas.RatingCreate(user_id=user.user_id, game_id=game2.game_id, rating=4, comment="",
-                                                   rating_date=datetime.now(UTC)))  # Empty comment
+                                                   rating_date=datetime.now(UTC).replace(tzinfo=None)))
     other_user, _ = create_test_user(db, username="another_rater", email="another@example.com")
     crud.create_rating(db=db, rating=schemas.RatingCreate(user_id=other_user.user_id, game_id=game1.game_id, rating=1,
-                                                          comment="Other comment", rating_date=datetime.now(UTC)))
+                                                          comment="Other comment",
+                                                          rating_date=datetime.now(UTC).replace(tzinfo=None)))
     ratings_with_comments = crud.get_ratings_with_comments_by_user(db, user_id=user.user_id)
 
     assert len(ratings_with_comments) == 1
@@ -261,7 +270,7 @@ def test_update_rating(db_session: Session):
         game_id=game.game_id,
         rating=2.5,
         comment="Needs improvement",
-        rating_date=datetime.now(UTC)
+        rating_date=datetime.now(UTC).replace(tzinfo=None)  # Ensure naive datetime for DB
     )
     db_rating = crud.create_rating(db=db, rating=rating_data)
     update_data = schemas.RatingUpdate(rating=4.0, comment="Much better now!")
@@ -279,13 +288,12 @@ def test_delete_rating(db_session: Session):
         game_id=game.game_id,
         rating=1.0,
         comment="Bad",
-        rating_date=datetime.now(UTC)
+        rating_date=datetime.now(UTC).replace(tzinfo=None)  # Ensure naive datetime for DB
     )
     db_rating = crud.create_rating(db=db, rating=rating_data)
     deleted_rating = crud.delete_rating(db, rating_id=db_rating.rating_id)
     assert deleted_rating is not None
     assert crud.get_rating(db, rating_id=db_rating.rating_id) is None
-
 
 # --- Backlog CRUD Tests ---
 
@@ -293,12 +301,13 @@ def test_create_backlog_item(db_session: Session):
     db = db_session
     user, _ = create_test_user(db, username="backlog_user", email="backlog@example.com")
     game = create_test_game(db, game_name="Backlog Game")
+    # Using BacklogItemCreate as per your schemas.py
     backlog_item_data = schemas.BacklogItemCreate(
         user_id=user.user_id,
         game_id=game.game_id,
         status=schemas.BacklogStatus.PLAYING
     )
-    db_backlog_item = crud.create_backlog_item(db=db, backlog_item=backlog_item_data)
+    db_backlog_item = crud.create_backlog_entry(db=db, backlog_entry=backlog_item_data)
     assert db_backlog_item.backlog_id is not None
     assert db_backlog_item.user_id == user.user_id
     assert db_backlog_item.game_id == game.game_id
@@ -309,13 +318,21 @@ def test_get_backlog_item(db_session: Session):
     db = db_session
     user, _ = create_test_user(db, username="get_backlog_user", email="get_backlog@example.com")
     game = create_test_game(db, game_name="Get Backlog Game")
-    backlog_item_data = schemas.BacklogItemCreate(user_id=user.user_id, game_id=game.game_id,
-                                                  status=schemas.BacklogStatus.COMPLETED)
-    db_backlog_item = crud.create_backlog_item(db=db, backlog_item=backlog_item_data)
-    retrieved_item = crud.get_backlog_item(db, backlog_id=db_backlog_item.backlog_id)
+
+    backlog_item_data = schemas.BacklogItemCreate(
+        user_id=user.user_id,
+        game_id=game.game_id,
+        status=schemas.BacklogStatus.COMPLETED
+    )
+    db_backlog_item = crud.create_backlog_entry(db=db, backlog_entry=backlog_item_data)
+
+    # Now retrieve it
+    retrieved_item = crud.get_backlog_entry(db, backlog_id=db_backlog_item.backlog_id)
+
     assert retrieved_item is not None
     assert retrieved_item.user_id == user.user_id
     assert retrieved_item.status == schemas.BacklogStatus.COMPLETED
+    assert retrieved_item.game_id == game.game_id
 
 
 def test_get_user_backlog(db_session: Session):
@@ -323,10 +340,13 @@ def test_get_user_backlog(db_session: Session):
     user, _ = create_test_user(db, username="user_for_backlog", email="user_for_backlog@example.com")
     game1 = create_test_game(db, game_name="User Backlog Game 1")
     game2 = create_test_game(db, game_name="User Backlog Game 2")
-    crud.create_backlog_item(db=db, backlog_item=schemas.BacklogItemCreate(user_id=user.user_id, game_id=game1.game_id,
-                                                                           status=schemas.BacklogStatus.PLAYING))
-    crud.create_backlog_item(db=db, backlog_item=schemas.BacklogItemCreate(user_id=user.user_id, game_id=game2.game_id,
-                                                                           status=schemas.BacklogStatus.DROPPED))
+
+    crud.create_backlog_entry(db=db,
+                              backlog_entry=schemas.BacklogItemCreate(user_id=user.user_id, game_id=game1.game_id,
+                                                                      status=schemas.BacklogStatus.PLAYING))
+    crud.create_backlog_entry(db=db,
+                              backlog_entry=schemas.BacklogItemCreate(user_id=user.user_id, game_id=game2.game_id,
+                                                                      status=schemas.BacklogStatus.DROPPED))
     backlog_items = user_crud.get_user_backlog(db, user_id=user.user_id)
     assert len(backlog_items) == 2
     assert all(item.user_id == user.user_id for item in backlog_items)
@@ -338,26 +358,36 @@ def test_update_backlog_item(db_session: Session):
     db = db_session
     user, _ = create_test_user(db, username="update_backlog_user", email="update_backlog@example.com")
     game = create_test_game(db, game_name="Update Backlog Game")
+
     backlog_item_data = schemas.BacklogItemCreate(user_id=user.user_id, game_id=game.game_id,
                                                   status=schemas.BacklogStatus.PLAYING)
-    db_backlog_item = crud.create_backlog_item(db=db, backlog_item=backlog_item_data)
-    update_data = schemas.BacklogItemUpdate(status=schemas.BacklogStatus.COMPLETED)
-    updated_item = crud.update_backlog_item(db=db, backlog_id=db_backlog_item.backlog_id,
-                                            backlog_item_update=update_data)
-    assert updated_item.status == schemas.BacklogStatus.COMPLETED
+    db_backlog_item = crud.create_backlog_entry(db=db, backlog_entry=backlog_item_data)
 
+    update_data = schemas.BacklogItemUpdate(status=schemas.BacklogStatus.COMPLETED)
+    updated_item = crud.update_backlog_entry(db=db, backlog_id=db_backlog_item.backlog_id,
+                                             backlog_update=update_data)
+    assert updated_item is not None
+    assert updated_item.backlog_id == db_backlog_item.backlog_id
+    assert updated_item.status == schemas.BacklogStatus.COMPLETED
+    retrieved_item = crud.get_backlog_entry(db, backlog_id=db_backlog_item.backlog_id)
+    assert retrieved_item.status == schemas.BacklogStatus.COMPLETED
 
 
 def test_delete_backlog_item(db_session: Session):
     db = db_session
     user, _ = create_test_user(db, username="user_delete_backlog", email="delete_backlog@example.com")
     game = create_test_game(db, game_name="Game to Delete from Backlog")
+
+    # Using BacklogItemCreate as per your schemas.py
     backlog_item_data = schemas.BacklogItemCreate(user_id=user.user_id, game_id=game.game_id,
                                                   status=schemas.BacklogStatus.PLAYING)
-    db_backlog_item = crud.create_backlog_item(db=db, backlog_item=backlog_item_data)
-    deleted_item = crud.delete_backlog_item(db, backlog_id=db_backlog_item.backlog_id)
+    db_backlog_item = crud.create_backlog_entry(db=db, backlog_entry=backlog_item_data)
+
+    # Using delete_backlog_entry as per your crud.py
+    deleted_item = crud.delete_backlog_entry(db, backlog_id=db_backlog_item.backlog_id)
     assert deleted_item is not None
-    assert crud.get_backlog_item(db, backlog_id=db_backlog_item.backlog_id) is None
+    assert deleted_item.backlog_id == db_backlog_item.backlog_id
+    assert crud.get_backlog_entry(db, backlog_id=db_backlog_item.backlog_id) is None
 
 
 # --- Recommendation CRUD Tests ---
@@ -369,7 +399,7 @@ def test_create_recommendation(db_session: Session):
     reco_data = schemas.RecommendationCreate(
         user_id=user.user_id,
         game_id=game.game_id,
-        timestamp=datetime.now(UTC),
+        timestamp=datetime.now(UTC).replace(tzinfo=None),  # Ensure naive datetime for DB
         recommendation_reason="Similar genre",
         documentation_rating=5.0,
         raw_gemini_output="Test raw Gemini output for recommendation.",
@@ -392,7 +422,7 @@ def test_get_recommendation(db_session: Session):
     reco_data = schemas.RecommendationCreate(
         user_id=user.user_id,
         game_id=game.game_id,
-        timestamp=datetime.now(UTC),
+        timestamp=datetime.now(UTC).replace(tzinfo=None),  # Ensure naive datetime for DB
         recommendation_reason="Based on rating",
         documentation_rating=3.0,
         raw_gemini_output="Test raw Gemini output for get recommendation.",
@@ -418,7 +448,7 @@ def test_get_recommendations(db_session: Session):
     crud.create_recommendation(db=db, recommendation=schemas.RecommendationCreate(
         user_id=user1.user_id,
         game_id=game1.game_id,
-        timestamp=datetime.now(UTC),
+        timestamp=datetime.now(UTC).replace(tzinfo=None),  # Ensure naive datetime for DB
         recommendation_reason="Reason 1",
         documentation_rating=4.0,
         raw_gemini_output="List reco 1 raw output",
@@ -427,7 +457,7 @@ def test_get_recommendations(db_session: Session):
     crud.create_recommendation(db=db, recommendation=schemas.RecommendationCreate(
         user_id=user2.user_id,
         game_id=game2.game_id,
-        timestamp=datetime.now(UTC),
+        timestamp=datetime.now(UTC).replace(tzinfo=None),  # Ensure naive datetime for DB
         recommendation_reason="Reason 2",
         documentation_rating=5.0,
         raw_gemini_output="List reco 2 raw output",
@@ -448,12 +478,11 @@ def test_update_recommendation(db_session: Session):
     reco_data = schemas.RecommendationCreate(
         user_id=user.user_id,
         game_id=game.game_id,
-        timestamp=datetime.now(UTC),
+        timestamp=datetime.now(UTC).replace(tzinfo=None),  # Ensure naive datetime for DB
         recommendation_reason="Old Reason",
         documentation_rating=2.5,
         raw_gemini_output="Old raw output.",
         structured_json_output='[{"game_name": "Old Game", "genre": "Old Genre", "igdb_link": "http://old.com", "reasoning": "Old reason"}]'
-        # Added this
     )
     db_reco = crud.create_recommendation(db=db, recommendation=reco_data)
 
@@ -462,7 +491,6 @@ def test_update_recommendation(db_session: Session):
         documentation_rating=4.5,
         raw_gemini_output="Updated raw output.",
         structured_json_output='[{"game_name": "New Game", "genre": "New Genre", "igdb_link": "http://new.com", "reasoning": "New reason"}]'
-        # Added this
     )
     updated_reco = crud.update_recommendation(db=db, recommendation_id=db_reco.recommendation_id,
                                               recommendation_update=update_data)
@@ -480,7 +508,7 @@ def test_delete_recommendation(db_session: Session):
     reco_data = schemas.RecommendationCreate(
         user_id=user.user_id,
         game_id=game.game_id,
-        timestamp=datetime.now(UTC),
+        timestamp=datetime.now(UTC).replace(tzinfo=None),  # Ensure naive datetime for DB
         recommendation_reason="To Delete",
         documentation_rating=1.5,
         raw_gemini_output="Raw output to delete.",
@@ -499,37 +527,28 @@ def test_get_user_recommendations(db_session: Session):
 
     game1 = create_test_game(db, game_name="Popular RPG", genre="RPG")
     game2 = create_test_game(db, game_name="Indie Adventure", genre="Adventure")
-    game3 = create_test_game(db, game_name="Fantasy RPG", genre="RPG")
+    game3 = create_test_game(db, game_name="Fantasy RPG", genre="RPG")  # This game will be recommended
     game4 = create_test_game(db, game_name="Sci-Fi Shooter", genre="Shooter")
 
-
     crud.create_rating(db=db, rating=schemas.RatingCreate(
-        user_id=user.user_id, game_id=game1.game_id, rating=5, comment="Loved it!", rating_date=datetime.now(UTC)
+        user_id=user.user_id, game_id=game1.game_id, rating=5, comment="Loved it!",
+        rating_date=datetime.now(UTC).replace(tzinfo=None)
     ))
 
-
-    crud.create_backlog_item(db=db, backlog_item=schemas.BacklogItemCreate(
+    # Using BacklogItemCreate as per your schemas.py, and create_backlog_entry as per your crud.py
+    crud.create_backlog_entry(db=db, backlog_entry=schemas.BacklogItemCreate(
         user_id=user.user_id, game_id=game2.game_id, status=schemas.BacklogStatus.PLAYING
     ))
 
+    recommendations_list = user_crud.get_user_recommendations(db, user_id=user.user_id)
 
-    dummy_raw_output = "Dummy raw output from Gemini."
-    dummy_structured_output = '[{"game_name": "Recommended Test Game", "genre": "Test Genre", "igdb_link": "http://test.com/game", "reasoning": "Because you like tests."}]'
+    assert recommendations_list is not None
+    assert isinstance(recommendations_list, list)
+    assert len(recommendations_list) > 0
+    assert all(isinstance(game, crud.models.Game) for game in recommendations_list)
 
-    crud.create_recommendation(db=db, recommendation=schemas.RecommendationCreate(
-        user_id=user.user_id,
-        game_id=game3.game_id,
-        timestamp=datetime.now(UTC),
-        recommendation_reason="Test recommendation",
-        documentation_rating=4.0,
-        raw_gemini_output=dummy_raw_output,
-        structured_json_output=dummy_structured_output
-    ))
-
-    recommendations_from_db = crud.get_latest_user_recommendation(db,
-                                                                  user_id=user.user_id)
-
-    assert recommendations_from_db is not None
-    assert recommendations_from_db.user_id == user.user_id
-    assert recommendations_from_db.raw_gemini_output == dummy_raw_output
-    assert recommendations_from_db.structured_json_output == dummy_structured_output
+    rated_or_backlogged_ids = {game1.game_id, game2.game_id}
+    for reco_game in recommendations_list:
+        assert reco_game.game_id not in rated_or_backlogged_ids
+        if game1.genre and "RPG" in game1.genre:
+            assert "RPG" in reco_game.genre
