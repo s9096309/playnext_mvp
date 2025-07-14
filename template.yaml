@@ -2,8 +2,59 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
   PlayNextFastAPI
-
   SAM Template for a FastAPI application deployed to AWS Lambda and API Gateway..
+
+Parameters:
+  # IGDB Credentials (Ensure these are replaced with your actual values during deployment)
+  IgdbClientId:
+    Type: String
+    NoEcho: 'true'
+    Description: IGDB Client ID
+  IgdbClientSecret:
+    Type: String
+    NoEcho: 'true'
+    Description: IGDB Client Secret
+  IgdbAppAccessToken:
+    Type: String
+    NoEcho: 'true'
+    Description: IGDB App Access Token
+
+  # Database Credentials (RDS/Postgres)
+  DbUser:
+    Type: String
+    Description: Database Username
+  DbPassword:
+    Type: String
+    NoEcho: 'true' # Prevents the password from being displayed in logs
+    Description: Database Password
+  DbHost:
+    Type: String
+    Description: Database Endpoint Host
+  DbPort:
+    Type: String
+    Default: '5432'
+    Description: Database Port
+  DbName:
+    Type: String
+    Description: Database Name
+
+  # Application Secrets (Used for FastAPI/Other Services)
+  AppClientId:
+    Type: String
+    NoEcho: 'true'
+    Description: Application Client ID
+  AppClientSecret:
+    Type: String
+    NoEcho: 'true'
+    Description: Application Client Secret
+  AppSecretKey:
+    Type: String
+    NoEcho: 'true'
+    Description: Application Secret Key
+  GeminiApiKey:
+    Type: String
+    NoEcho: 'true'
+    Description: Gemini API Key
 
 Globals:
   Function:
@@ -14,7 +65,7 @@ Globals:
     Handler: app.main.handler
 
 Resources:
-  PlayNextFastAPIFunction: # This is the Logical ID for your Lambda Function
+  PlayNextFastAPIFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: playnext-api-function-sam
@@ -27,37 +78,42 @@ Resources:
             RestApiId: !Ref PlayNextApiGateway
       Environment:
         Variables:
-          IGDB_CLIENT_ID: 7gxsz8m02jtnyjn2v45wcdo2sjlugb
-          IGDB_CLIENT_SECRET: fsllt0671es4ikpfv2m13cwae52coq
-          IGDB_APP_ACCESS_TOKEN: 2tdblwo209728ha8lf1urxmgz62dwd
+          # IGDB Variables
+          IGDB_CLIENT_ID: !Ref IgdbClientId
+          IGDB_CLIENT_SECRET: !Ref IgdbClientSecret
+          IGDB_APP_ACCESS_TOKEN: !Ref IgdbAppAccessToken
 
-          DATABASE_URL: postgresql+psycopg2://kevinhoffmann:24kvn187@playnext-db-instance.cb422k4kutns.eu-central-1.rds.amazonaws.com:5432/playnext_db
-          DB_USER: kevinhoffmann
-          DB_PASS: 24kvn187
-          DB_HOST: localhost
-          DB_PORT: 5432
-          DB_NAME: playnext_db
+          # Database Variables
+          # We use !Sub to construct the connection URL dynamically using the parameters
+          DATABASE_URL: !Sub "postgresql+psycopg2://${DbUser}:${DbPassword}@${DbHost}:${DbPort}/${DbName}"
+          DB_USER: !Ref DbUser
+          DB_PASS: !Ref DbPassword
+          DB_HOST: !Ref DbHost
+          DB_PORT: !Ref DbPort
+          DB_NAME: !Ref DbName
 
-          CLIENT_ID: K5yWDRhZMxviRzi9HtY4Bo7BjZztuWTyzsS0lCSeXNI=
-          CLIENT_SECRET: r5_o024NtOagUbt5917dj8rEPf5NZDfcQYwNeL4Kpw8=
-          SECRET_KEY: EQsxHTndCjeI7kOK4jcmxas5OASq-EtzwkbF17uT0x4=
-          GEMINI_API_KEY: AIzaSyAytnwdZgklAKINAq1wBY8mIQCelKFCFms
+          # Client and Secret Keys
+          CLIENT_ID: !Ref AppClientId
+          CLIENT_SECRET: !Ref AppClientSecret
+          SECRET_KEY: !Ref AppSecretKey
+          GEMINI_API_KEY: !Ref GeminiApiKey
 
-          POSTGRES_DB: playnext_db
-          POSTGRES_USER: kevinhoffmann
-          POSTGRES_PASSWORD: 24kvn187
-    VpcConfig:
-        SecurityGroupIds:
-          # Use the ID of your default security group
-          - sg-06bd4c46f330d5146
-        SubnetIds:
-          # Use the IDs of your default subnets
-          - subnet-0da3a4ceca8b7c89b
-          - subnet-00eac2700c52df303
-          - subnet-01cc94ff74c986422
+          # Postgres (parameterized versions of redundant variables)
+          POSTGRES_DB: !Ref DbName
+          POSTGRES_USER: !Ref DbUser
+          POSTGRES_PASSWORD: !Ref DbPassword
 
+      VpcConfig:
+          SecurityGroupIds:
+            # Use the ID of your default security group
+            - sg-06bd4c46f330d5146
+          SubnetIds:
+            # Use the IDs of your default subnets
+            - subnet-0da3a4ceca8b7c89b
+            - subnet-00eac2700c52df303
+            - subnet-01cc94ff74c986422
 
-  PlayNextApiGateway: # This is the Logical ID for your API Gateway
+  PlayNextApiGateway:
     Type: AWS::Serverless::Api
     Properties:
       StageName: dev
@@ -113,7 +169,7 @@ Resources:
             - PATCH
             - POST
             - PUT
-          allowCredentials: true # Boolean, not a string
+          allowCredentials: true
 
         paths:
           /{proxy+}:
