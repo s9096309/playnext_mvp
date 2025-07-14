@@ -1,0 +1,132 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  PlayNextFastAPI
+
+  SAM Template for a FastAPI application deployed to AWS Lambda and API Gateway..
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 128
+    Runtime: python3.12
+    CodeUri: .
+    Handler: app.main.handler
+
+Resources:
+  PlayNextFastAPIFunction: # This is the Logical ID for your Lambda Function
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: playnext-api-function-sam
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
+            RestApiId: !Ref PlayNextApiGateway
+      Environment:
+        Variables:
+          IGDB_CLIENT_ID: 7gxsz8m02jtnyjn2v45wcdo2sjlugb
+          IGDB_CLIENT_SECRET: fsllt0671es4ikpfv2m13cwae52coq
+          IGDB_APP_ACCESS_TOKEN: 2tdblwo209728ha8lf1urxmgz62dwd
+
+          DATABASE_URL: postgresql+psycopg2://kevinhoffmann:24kvn187@playnext-db-instance.cb422k4kutns.eu-central-1.rds.amazonaws.com:5432/playnext_db
+          DB_USER: kevinhoffmann
+          DB_PASS: 24kvn187
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: playnext_db
+
+          CLIENT_ID: K5yWDRhZMxviRzi9HtY4Bo7BjZztuWTyzsS0lCSeXNI=
+          CLIENT_SECRET: r5_o024NtOagUbt5917dj8rEPf5NZDfcQYwNeL4Kpw8=
+          SECRET_KEY: EQsxHTndCjeI7kOK4jcmxas5OASq-EtzwkbF17uT0x4=
+          GEMINI_API_KEY: AIzaSyAytnwdZgklAKINAq1wBY8mIQCelKFCFms
+
+          POSTGRES_DB: playnext_db
+          POSTGRES_USER: kevinhoffmann
+          POSTGRES_PASSWORD: 24kvn187
+    VpcConfig:
+        SecurityGroupIds:
+          # Use the ID of your default security group
+          - sg-06bd4c46f330d5146
+        SubnetIds:
+          # Use the IDs of your default subnets
+          - subnet-0da3a4ceca8b7c89b
+          - subnet-00eac2700c52df303
+          - subnet-01cc94ff74c986422
+
+
+  PlayNextApiGateway: # This is the Logical ID for your API Gateway
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: dev
+      EndpointConfiguration: REGIONAL
+      DefinitionBody:
+        openapi: '3.0.1'
+        info:
+          title: !Sub '${AWS::StackName}-API'
+
+        # Binary Media Types for API Gateway
+        x-amazon-apigateway-binary-media-types:
+          - '*/*'
+
+        # Gateway Responses for API Gateway
+        x-amazon-apigateway-gateway-responses:
+          DEFAULT_4XX:
+            statusCode: 400
+            responseParameters:
+              gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+              gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'"
+              gatewayresponse.header.Access-Control-Allow-Methods: "'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'"
+              gatewayresponse.header.Access-Control-Allow-Credentials: "'true'"
+            responseTemplates:
+              application/json: |
+                {"message": "$context.error.message", "type": "$context.error.responseType"}
+          DEFAULT_5XX:
+            statusCode: 500
+            responseParameters:
+              gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+              gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'"
+              gatewayresponse.header.Access-Control-Allow-Methods: "'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT'"
+              gatewayresponse.header.Access-Control-Allow-Credentials: "'true'"
+            responseTemplates:
+              application/json: |
+                {"message": "$context.error.message", "type": "$context.error.responseType"}
+
+        # CORS configuration for API Gateway
+        x-amazon-apigateway-cors:
+          allowOrigins:
+            - '*'
+          allowHeaders:
+            - Content-Type
+            - X-Amz-Date
+            - Authorization
+            - X-Api-Key
+            - X-Amz-Security-Token
+            - X-Amz-User-Agent
+          allowMethods:
+            - DELETE
+            - GET
+            - HEAD
+            - OPTIONS
+            - PATCH
+            - POST
+            - PUT
+          allowCredentials: true # Boolean, not a string
+
+        paths:
+          /{proxy+}:
+            x-amazon-apigateway-any-method:
+              produces:
+                - application/json
+              x-amazon-apigateway-integration:
+                type: aws_proxy
+                httpMethod: POST # This is correct for proxy integration
+                uri: !Sub 'arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PlayNextFastAPIFunction.Arn}/invocations'
+                passthroughBehavior: WHEN_NO_MATCH
+
+Outputs:
+  ApiGatewayEndpoint:
+    Description: "API Gateway endpoint URL for Dev stage"
+    Value: !Sub "https://${PlayNextApiGateway}.execute-api.${AWS::Region}.amazonaws.com/dev/"
