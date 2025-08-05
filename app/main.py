@@ -12,7 +12,6 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.staticfiles import StaticFiles
 
-# NEW IMPORT: Mangum
 from mangum import Mangum
 
 from app.database.session import create_tables
@@ -32,12 +31,6 @@ async def lifespan(_app: FastAPI):
     create_tables()
     print("Database tables created/checked.")
     yield
-    # On shutdown, perform any cleanup if necessary.
-    # In Lambda, this shutdown part is less predictable as the environment
-    # can be recycled at any time by AWS. For database connections, ensure
-    # your session management (e.g., using get_db() in routers) is robust,
-    # and consider AWS RDS Proxy for true connection pooling.
-    print("Application shutdown.")
 
 
 app = FastAPI(
@@ -77,11 +70,4 @@ app.include_router(games.router, tags=["Games"])
 app.include_router(backlog_items.router, tags=["Backlog"])
 app.include_router(recommendations.router, tags=["Recommendations"])
 
-
-# --- NEW ADDITION FOR AWS LAMBDA ---
-# This wraps your FastAPI application with Mangum, making it compatible
-# with AWS Lambda's event invocation model.
-# When setting up your Lambda function, you will point the "Handler"
-# field to this variable (e.g., if this file is 'main.py', the handler
-# would be 'main.handler').
 handler = Mangum(app)
