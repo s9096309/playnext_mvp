@@ -13,10 +13,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
-from app.database import schemas, user_crud
-from app.database.session import get_db
-from app.utils.auth import create_access_token
-from app.utils.security import verify_password
+from database import user_crud, schemas
+from database.session import get_db
+from utils.auth import create_access_token
+from utils.security import verify_password
 
 
 ACCESS_TOKEN_EXPIRE_MINUTES = 30

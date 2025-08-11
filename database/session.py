@@ -20,15 +20,22 @@ Base = declarative_base()
 
 
 def get_engine() -> Engine:
-    """
-    Initializes and returns the SQLAlchemy engine.
-    This function ensures the engine is created only once.
-    """
     global _engine
     if _engine is None:
         database_url = os.getenv("DATABASE_URL")
+
         if not database_url:
-            raise ValueError("DATABASE_URL not found in .env file or environment.")
+            # Build DATABASE_URL from components
+            user = os.getenv("POSTGRES_USER")
+            password = os.getenv("POSTGRES_PASSWORD")
+            host = os.getenv("POSTGRES_HOST")
+            port = os.getenv("POSTGRES_PORT")
+            db = os.getenv("POSTGRES_DB")
+
+            if not all([user, password, host, port, db]):
+                raise ValueError("Missing DB connection environment variables")
+
+            database_url = f"postgresql+psycopg2://{user}:{password}@{host}:{port}/{db}"
 
         connect_args = {}
 
