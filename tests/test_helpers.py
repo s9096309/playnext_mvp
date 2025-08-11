@@ -63,7 +63,7 @@ def create_test_game(db: Session, game_name: str = None, genre: str = "Action",
     if game_name is None:
         game_name = f"Test Game {uuid.uuid4().hex[:8]}" # Make game_name unique
 
-    # Ensure image_url has a default if not provided, for consistency
+    # Ensure image_url has a default if not provided
     if image_url is None:
         image_url = f"http://example.com/game_images/{igdb_id}.jpg"
 
