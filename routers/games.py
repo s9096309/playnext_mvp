@@ -11,10 +11,11 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy.orm import Session, joinedload # joinedload is used below
 
-from app.database import crud, schemas, models
-from app.database.session import get_db
-from app.utils import igdb_utils
-from app.utils.auth import get_current_user
+from database import crud
+from database import schemas, models
+from database.session import get_db
+from utils import igdb_utils
+from utils.auth import get_current_user
 
 
 router = APIRouter(prefix="/games", tags=["Games"])

@@ -6,8 +6,8 @@ from fastapi import HTTPException, status, Depends
 from passlib.context import CryptContext
 import os
 from sqlalchemy.orm import Session
-from app.database import user_crud, models
-from app.database.session import get_db
+from database import user_crud, models
+from database.session import get_db
 from fastapi.security import OAuth2PasswordBearer
 
 SECRET_KEY = os.getenv("SECRET_KEY", "your-default-secret-key-for-testing-only-make-it-long-and-random") # <-- CHANGE HERE

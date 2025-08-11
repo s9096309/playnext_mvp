@@ -8,14 +8,15 @@ games within a user's backlog. It includes authorization checks to ensure
 users can only manage their own backlog entries.
 """
 
-from typing import List, Optional
+from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.database import crud, models, schemas
-from app.database.session import get_db
-from app.utils.auth import get_current_user
+from database import crud
+from database import schemas, models
+from database.session import get_db
+from utils.auth import get_current_user
 
 
 

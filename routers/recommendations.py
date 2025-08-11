@@ -2,16 +2,17 @@ import json
 import os
 import re
 from datetime import datetime, timedelta, timezone
-from typing import List, Optional, Dict, Any
+from typing import List, Optional
 
 import google.generativeai as genai
 from dotenv import load_dotenv
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 
-from app.database import crud, models, schemas, user_crud
-from app.database.session import get_db
-from app.utils import igdb_utils
+from database import crud
+from database import user_crud, schemas
+from database.session import get_db
+from utils import igdb_utils
 
 
 load_dotenv()

@@ -2,16 +2,13 @@ import datetime
 from typing import List, Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy.orm import joinedload, selectinload
-from starlette.responses import Response
 
-from app.database import models, schemas
-from app.database import user_crud
-from app.routers.recommendations import get_user_recommendations as get_recs_from_service
+from database import user_crud, schemas, models
+from routers.recommendations import get_user_recommendations as get_recs_from_service
 
-from app.utils.auth import get_current_user, get_current_active_user
-from app.utils.security import hash_password
-from app.database.session import SessionDep, get_db, Session
+from utils.auth import get_current_user, get_current_active_user
+from utils.security import hash_password
+from database.session import SessionDep, get_db, Session
 
 router = APIRouter(prefix="/users", tags=["Users"])
 

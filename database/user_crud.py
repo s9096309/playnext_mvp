@@ -1,10 +1,8 @@
 # app/database/user_crud.py
-import uuid
 from typing import List, Optional
-from datetime import datetime, timezone
 from sqlalchemy.orm import Session
-from sqlalchemy import desc, asc, and_
-from app.utils.auth import get_password_hash
+from sqlalchemy import desc, and_
+from utils.auth import get_password_hash
 from . import models, schemas
 
 

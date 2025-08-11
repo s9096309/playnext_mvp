@@ -5,9 +5,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import joinedload, selectinload
 from starlette.responses import Response
 
-from app.database import models, schemas
-from app.database.session import SessionDep
-from app.utils.auth import get_current_user, get_current_active_user
+from database import schemas, models
+from database.session import SessionDep
+from utils.auth import get_current_user, get_current_active_user
 
 
 router = APIRouter(tags=["Ratings"])
