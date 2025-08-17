@@ -1,8 +1,9 @@
 # Core FastAPI / Web Framework
 fastapi==0.115.12
-starlette==0.46.1
+starlette==0.47.2
 uvicorn==0.34.0
-mangum==0.19.0 # Essential for Lambda
+gunicorn
+# mangum==0.19.0 # Essential for Lambda
 
 # Database
 SQLAlchemy==2.0.38

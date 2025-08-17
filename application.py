@@ -8,7 +8,7 @@ on application startup.
 
 import uvicorn
 from contextlib import asynccontextmanager
-from pathlib import Path  # Import the Path module
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -19,10 +19,7 @@ from routers import auth, backlog_items, games, recommendations, users, ratings
 
 print("--- PlayNext API application module loaded ---")
 
-# --- ADD THIS ---
-# Define the absolute path to the project's root directory
 BASE_DIR = Path(__file__).resolve().parent
-# --- END ADD ---
 
 
 @asynccontextmanager
@@ -35,7 +32,6 @@ async def lifespan(_app: FastAPI):
     print("Application shutdown.")
 
 
-# The variable MUST be named 'application' for Elastic Beanstalk's Python platform
 application = FastAPI(
     title="PlayNext API",
     description="API for managing game backlogs, ratings, and recommendations.",
@@ -51,9 +47,7 @@ async def read_root_message():
     return {"message": "Welcome to the PlayNext API! Navigate to /docs for API documentation."}
 
 
-# --- MODIFY THIS LINE ---
 application.mount("/static", StaticFiles(directory=f"{BASE_DIR}/static"), name="static")
-# --- END MODIFY ---
 
 
 # Configure CORS (Cross-Origin Resource Sharing) middleware
