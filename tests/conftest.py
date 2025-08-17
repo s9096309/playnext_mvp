@@ -3,13 +3,12 @@
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
-from app.main import app
+from application import application as app
 from fastapi.testclient import TestClient
-from app.database.models import Base
-from app.database.session import get_db
+from database.models import Base
+from database.session import get_db
 from dotenv import load_dotenv
 
-# --- Fixture to load .env for tests ---
 @pytest.fixture(scope="session", autouse=True)
 def load_env_for_tests():
     """

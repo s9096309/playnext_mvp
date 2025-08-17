@@ -6,8 +6,9 @@ from typing import Optional, Tuple
 
 from sqlalchemy.orm import Session
 
-from app.database import crud, user_crud, models, schemas
-from app.utils.auth import create_access_token, get_password_hash, ACCESS_TOKEN_EXPIRE_MINUTES
+from database import crud
+from database import user_crud, schemas, models
+from utils.auth import create_access_token, get_password_hash, ACCESS_TOKEN_EXPIRE_MINUTES
 
 
 
