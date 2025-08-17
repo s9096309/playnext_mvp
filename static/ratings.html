@@ -211,14 +211,14 @@
         </div>
         <nav>
             <ul>
-                <li><a href="http://51.20.51.204:8000/static/index.html">Home</a></li>
-                <li><a href="http://51.20.51.204:8000/static/ratings.html">Ratings</a></li>
-                <li><a href="http://51.20.51.204:8000/static/about.html">About</a></li>
-                <li><a href="http://51.20.51.204:8000/static/backlog.html">Backlog</a></li>
-                <li><a href="http://51.20.51.204:8000/static/profile.html">Profile</a></li>
+                <li><a href="/static/index.html">Home</a></li>
+                <li><a href="/static/ratings.html">Ratings</a></li>
+                <li><a href="/static/about.html">About</a></li>
+                <li><a href="/static/backlog.html">Backlog</a></li>
+                <li><a href="/static/profile.html">Profile</a></li>
                 <li><span id="welcomeMessage" class="welcome-message" style="display: none;"></span></li>
-                <li><a href="http://51.20.51.204:8000/static/login.html" id="loginLink">Login</a></li>
-                <li><a href="http://51.20.51.204:8000/static/register.html" id="registerLink">Register</a></li>
+                <li><a href="/static/login.html" id="loginLink">Login</a></li>
+                <li><a href="/static/register.html" id="registerLink">Register</a></li>
                 <li><button id="logoutButton" style="display: none;">Logout</button></li>
             </ul>
         </nav>
@@ -273,7 +273,7 @@
     </main>
 
     <script>
-        const API_BASE_URL = 'http://51.20.51.204:8000';
+        const API_BASE_URL = 'http://ec2-3-74-44-41.eu-central-1.compute.amazonaws.com';
         const GAMES_ENDPOINT = `${API_BASE_URL}/games`;
         const USER_RATINGS_ENDPOINT = `${API_BASE_URL}/users/me/ratings`;
         const GAME_RATINGS_ENDPOINT_PREFIX = `${API_BASE_URL}/games`;
