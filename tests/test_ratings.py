@@ -5,10 +5,10 @@ import uuid
 from fastapi import status
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
-from datetime import datetime, timedelta, date, UTC  # Ensure UTC is imported
-from app.main import app
-from app.database import models, schemas, crud
-from app.database import user_crud  # Potentially not needed here if user_crud isn't directly called
+from datetime import datetime, UTC  # Ensure UTC is imported
+from application import application as app
+from database import crud
+from database import schemas
 
 from test_helpers import create_test_user, create_test_game
 

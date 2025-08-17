@@ -1,12 +1,10 @@
 # tests/test_crud.py
-import pytest
 from sqlalchemy.orm import Session
 from datetime import datetime, date, UTC
 import uuid
 
-from app.database import crud
-from app.database import user_crud
-from app.database import schemas
+from database import crud
+from database import user_crud, schemas
 from test_helpers import create_test_user, create_test_game
 
 
@@ -376,10 +374,12 @@ def test_delete_backlog_item(db_session: Session):
     user, _ = create_test_user(db, username="user_delete_backlog", email="delete_backlog@example.com")
     game = create_test_game(db, game_name="Game to Delete from Backlog")
 
+    # Using BacklogItemCreate as per your schemas.py
     backlog_item_data = schemas.BacklogItemCreate(user_id=user.user_id, game_id=game.game_id,
                                                   status=schemas.BacklogStatus.PLAYING)
     db_backlog_item = crud.create_backlog_entry(db=db, backlog_entry=backlog_item_data)
 
+    # Using delete_backlog_entry as per your crud.py
     deleted_item = crud.delete_backlog_entry(db, backlog_id=db_backlog_item.backlog_id)
     assert deleted_item is not None
     assert deleted_item.backlog_id == db_backlog_item.backlog_id
@@ -531,7 +531,7 @@ def test_get_user_recommendations(db_session: Session):
         rating_date=datetime.now(UTC).replace(tzinfo=None)
     ))
 
-    
+    # Using BacklogItemCreate as per your schemas.py, and create_backlog_entry as per your crud.py
     crud.create_backlog_entry(db=db, backlog_entry=schemas.BacklogItemCreate(
         user_id=user.user_id, game_id=game2.game_id, status=schemas.BacklogStatus.PLAYING
     ))
