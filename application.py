@@ -11,6 +11,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.staticfiles import StaticFiles
 
@@ -38,12 +39,12 @@ application = FastAPI(
     lifespan=lifespan
 )
 
-@application.get("/", summary="Root endpoint for PlayNext API")
-async def read_root_message():
+@application.get("/", summary="Serve the frontend")
+async def serve_frontend():
     """
-    Provides a welcome message for the API root.
+    Serves the main HTML file.
     """
-    return {"message": "Welcome to the PlayNext API! Navigate to /docs for API documentation."}
+    return FileResponse("static/index.html")
 
 
 application.mount("/static", StaticFiles(directory=f"{BASE_DIR}/static"), name="static")
