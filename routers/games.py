@@ -42,9 +42,6 @@ def _process_igdb_game_data(igdb_game: dict) -> schemas.GameCreate:
 
     age_rating: Optional[str] = None
     if 'age_ratings' in igdb_game and igdb_game['age_ratings']:
-        # IMPORTANT: Ensure igdb_utils.get_age_ratings and igdb_utils.map_igdb_age_rating
-        # exist and are correctly implemented in app/utils/igdb_utils.py
-        # Pylint previously flagged 'get_age_ratings' as non-existent (E1101).
         mapped_ratings = [
             igdb_utils.map_igdb_age_rating(rating['rating'])
             for rating in igdb_utils.get_age_ratings(igdb_game['age_ratings'])
@@ -134,10 +131,7 @@ def create_game(
 
 
 @router.get("/", response_model=List[schemas.Game])
-# pylint: disable=R0913, R0917
-# R0913 (Too many arguments) and R0917 (Too many positional arguments)
-# are disabled here as these query parameters are often necessary for
-# flexible filtering and pagination in a GET endpoint.
+
 def read_games(
     skip: int = 0,
     limit: int = 100,

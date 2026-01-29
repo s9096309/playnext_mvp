@@ -14,7 +14,6 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.staticfiles import StaticFiles
 
-from database.session import create_tables
 from routers import auth, backlog_items, games, recommendations, users, ratings
 
 print("--- PlayNext API application module loaded ---")
@@ -68,5 +67,4 @@ application.include_router(recommendations.router, tags=["Recommendations"])
 
 
 if __name__ == "__main__":
-    # This block is for local development
     uvicorn.run(application, host="0.0.0.0", port=8080)

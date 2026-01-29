@@ -5,30 +5,22 @@ from sqlalchemy import pool
 
 from alembic import context
 from database.models import Base
-import os # Make sure os is imported
+import os
 import sys
 
 sys.path.append(os.getcwd())  # Add the project's root directory to sys.path
-# this is the Alembic Config object, which provides
-# access to the values within the .ini file in use.
 config = context.config
 
-# Get the database URL from the environment variable
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
 if DATABASE_URL:
     # Set the sqlalchemy.url option in the Alembic config object
-    # This is what engine_from_config will then pick up
     config.set_main_option("sqlalchemy.url", DATABASE_URL)
 else:
-    # This block handles cases where DATABASE_URL is not set.
-    # In CI, it should always be set, but it's good for local testing or debugging.
     print("WARNING: DATABASE_URL environment variable is not set. Migrations might fail.")
-    # You could also raise an error here if a DB URL is strictly required.
-    # raise Exception("DATABASE_URL environment variable is not set!")
+    raise Exception("DATABASE_URL environment variable is not set!")
 
-# Interpret the config file for Python logging.
-# This line sets up loggers basically.
+
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
@@ -38,11 +30,6 @@ if config.config_file_name is not None:
 # target_metadata = mymodel.Base.metadata
 
 target_metadata = Base.metadata
-
-# other values from the config, defined by the needs of env.py,
-# can be acquired:
-# my_important_option = config.get_main_option("my_important_option")
-# ... etc.
 
 
 def run_migrations_offline() -> None:
@@ -57,7 +44,6 @@ def run_migrations_offline() -> None:
     encrypt_script.py output.
 
     """
-    # This line is okay as it reads from the config, which we now set above
     url = config.get_main_option("sqlalchemy.url")
     context.configure(
         url=url,
@@ -77,7 +63,6 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-    # This function will now correctly find 'sqlalchemy.url' in 'config'
     connectable = engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",

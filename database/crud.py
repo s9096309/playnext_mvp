@@ -75,10 +75,6 @@ def get_game_by_name(
     return best_match
 
 
-# pylint: disable=R0913, R0917
-# R0913 (Too many arguments) and R0917 (Too many positional arguments)
-# are disabled here as these query parameters are often necessary for
-# flexible filtering and pagination in a GET endpoint.
 def get_games(
     db: Session,
     skip: int = 0,

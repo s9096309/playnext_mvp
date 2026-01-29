@@ -11,11 +11,6 @@ from typing import List, Optional
 
 from pydantic import BaseModel, EmailStr, Field, ConfigDict
 
-# pylint: disable=R0903
-# R0903 (Too few public methods) is disabled for this file
-# as Pydantic models are primarily data containers and
-# naturally have few public methods.
-
 
 class BacklogStatus(str, enum.Enum):
     """Enumeration for the status of a game in a user's backlog."""
@@ -227,7 +222,7 @@ class RatingResponse(BaseModel):
     rating_date: datetime.datetime
     updated_at: Optional[datetime.datetime] = None
 
-    game: Optional["Game"] = None # Correct forward reference to Game schema
+    game: Optional["Game"] = None
 
     model_config = ConfigDict(from_attributes=True)
 

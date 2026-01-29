@@ -13,14 +13,14 @@ import json
 import logging
 from typing import Optional, List, Dict, Any
 
-import httpx # Ensure httpx is installed: pip install httpx
+import httpx
 from dotenv import load_dotenv
 
 # Configure logging for this module
 logger = logging.getLogger(__name__)
-# Set level to DEBUG for detailed output during development/debugging
+
 logger.setLevel(logging.DEBUG)
-# Basic console handler (you might have a more sophisticated setup in main.py)
+# Basic console handler
 if not logger.handlers:
     handler = logging.StreamHandler()
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
@@ -33,9 +33,6 @@ load_dotenv()
 # Retrieve API credentials from environment variables
 CLIENT_ID = os.getenv("IGDB_CLIENT_ID")
 CLIENT_SECRET = os.getenv("IGDB_CLIENT_SECRET")
-# The access token obtained from Twitch, used for IGDB API calls.
-# It should be refreshed periodically as it expires.
-# This variable will be updated by get_new_igdb_app_access_token
 CURRENT_IGDB_ACCESS_TOKEN: Optional[str] = os.getenv("IGDB_APP_ACCESS_TOKEN")
 
 # Validate that necessary environment variables are loaded
@@ -70,18 +67,14 @@ def get_new_igdb_app_access_token() -> Optional[str]:
     }
     try:
         logger.info("Attempting to get new Twitch App Access Token...")
-        # httpx.post is synchronous here, which is fine for a startup utility function
-        # For async contexts (like FastAPI routes), you'd use httpx.AsyncClient().post
         response = httpx.post(TWITCH_TOKEN_URL, data=payload)
-        response.raise_for_status()  # Raise an exception for HTTP errors (4xx or 5xx)
+        response.raise_for_status()
         token_data = response.json()
         new_token = token_data.get("access_token")
         if new_token:
             CURRENT_IGDB_ACCESS_TOKEN = new_token
             logger.info("Successfully acquired new Twitch App Access Token.")
             logger.debug("New token: %s", new_token) # Log token for debugging
-            # In a production setup, you might want to store this token
-            # in a more persistent or secure way, and its expiry time.
             return new_token
         else:
             logger.error("New access token not found in Twitch response: %s", token_data)
@@ -101,7 +94,6 @@ def get_new_igdb_app_access_token() -> Optional[str]:
 
 
 # Initial check/refresh for the token when the module loads
-# This ensures that CURRENT_IGDB_ACCESS_TOKEN is always populated at startup.
 if not CURRENT_IGDB_ACCESS_TOKEN:
     logger.warning("IGDB_APP_ACCESS_TOKEN not found in .env, attempting to acquire a new one.")
     get_new_igdb_app_access_token()
@@ -110,7 +102,7 @@ if not CURRENT_IGDB_ACCESS_TOKEN:
             "Failed to acquire IGDB_APP_ACCESS_TOKEN during startup. "
             "IGDB API calls will likely fail."
         )
-elif "YOUR_MANUALLY_GENERATED_TOKEN" in CURRENT_IGDB_ACCESS_TOKEN: # This is a placeholder check
+elif "YOUR_MANUALLY_GENERATED_TOKEN" in CURRENT_IGDB_ACCESS_TOKEN: # Placeholder check
     logger.info("Detected placeholder token, attempting to acquire a new Twitch App Access Token.")
     get_new_igdb_app_access_token()
 else:
@@ -140,10 +132,10 @@ def _make_igdb_request(endpoint: str, body: str) -> Optional[bytes]:
     url = f"{IGDB_API_BASE_URL}{endpoint}"
 
     try:
-        logger.debug("Making request to %s with body: %s", url, body) # Debug line
-        response = httpx.post(url, headers=headers, content=body, timeout=10.0) # Added timeout
+        logger.debug("Making request to %s with body: %s", url, body)
+        response = httpx.post(url, headers=headers, content=body, timeout=10.0)
         response.raise_for_status()  # Raises an exception for 4xx/5xx responses
-        logger.debug("Successful response from %s (Status: %d).", endpoint, response.status_code) # Debug line
+        logger.debug("Successful response from %s (Status: %d).", endpoint, response.status_code)
         return response.content
     except httpx.HTTPStatusError as e:
         logger.error(
@@ -153,7 +145,7 @@ def _make_igdb_request(endpoint: str, body: str) -> Optional[bytes]:
         # If it's a 401 Unauthorized, try to refresh token and retry
         if e.response.status_code == 401:
             logger.warning("IGDB token unauthorized, attempting to refresh token and retry request...")
-            if get_new_igdb_app_access_token():  # Try to get new token
+            if get_new_igdb_app_access_token():
                 # Update headers with the new token for retry
                 headers["Authorization"] = f"Bearer {CURRENT_IGDB_ACCESS_TOKEN}"
                 try:
@@ -180,7 +172,7 @@ def _make_igdb_request(endpoint: str, body: str) -> Optional[bytes]:
         return None
 
 
-def search_games_igdb(query: str) -> Optional[List[Dict[str, Any]]]: # Changed return type hint
+def search_games_igdb(query: str) -> Optional[List[Dict[str, Any]]]:
     """
     Searches for games on IGDB by query string using direct httpx.
 
@@ -191,22 +183,20 @@ def search_games_igdb(query: str) -> Optional[List[Dict[str, Any]]]: # Changed r
         Optional[List[dict]]: A list of dictionaries representing game data from IGDB,
                               or None if an error occurs.
     """
-    # Requesting common fields, and specifically 'url' for the IGDB link
-    # 'cover.url' to get the cover image URL directly
-    # 'genres.name' to get human-readable genre names
+
     body = (f'search "{query}"; fields name, url, genres.name, '
-            'platforms.name, id, cover.url; limit 5;') # Increased limit for more options
+            'platforms.name, id, cover.url; limit 5;')
 
     byte_array = _make_igdb_request("games", body)
     if byte_array:
         try:
             result = json.loads(byte_array)
-            logger.debug("IGDB search result for '%s': %s", query, result) # Debug line
+            logger.debug("IGDB search result for '%s': %s", query, result)
             return result
         except json.JSONDecodeError as e:
-            logger.error("JSON decode error for search '%s': %s. Raw response: %s", query, e, byte_array) # Added raw response
+            logger.error("JSON decode error for search '%s': %s. Raw response: %s", query, e, byte_array)
             return None
-    logger.debug("No byte array received from IGDB for search '%s'.", query) # Debug line
+    logger.debug("No byte array received from IGDB for search '%s'.", query)
     return None
 
 

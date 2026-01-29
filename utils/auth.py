@@ -10,7 +10,7 @@ from database import user_crud, models
 from database.session import get_db
 from fastapi.security import OAuth2PasswordBearer
 
-SECRET_KEY = os.getenv("SECRET_KEY", "your-default-secret-key-for-testing-only-make-it-long-and-random") # <-- CHANGE HERE
+SECRET_KEY = os.getenv("SECRET_KEY", "your-default-secret-key-for-testing-only-make-it-long-and-random")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
@@ -42,7 +42,7 @@ def decode_access_token(token: str):
     try:
         # Ensure SECRET_KEY is not None before attempting decode
         if SECRET_KEY is None:
-            raise ValueError("SECRET_KEY is not set.") # Or another appropriate error
+            raise ValueError("SECRET_KEY is not set.")
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         return payload
     except jwt.ExpiredSignatureError:
