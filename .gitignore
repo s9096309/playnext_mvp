@@ -9,6 +9,10 @@ venv/
 .idea/
 *.db
 .coverage
+database/.DS_Store
+routers/.DS_Store
+*.DS_Store
+
 # Elastic Beanstalk Files
 .elasticbeanstalk/*
 !.elasticbeanstalk/*.cfg.yml

@@ -40,8 +40,8 @@ def db_session_fixture():
         yield db
     finally:
         transaction.rollback() # Rollback all changes made by the test
-        db.close() # Close the session
-        connection.close() # Close the connection
+        db.close()
+        connection.close()
         Base.metadata.drop_all(bind=engine) # Drop tables to ensure a completely clean slate
 
 
@@ -59,4 +59,4 @@ def client_fixture(db_session: Session):
     with TestClient(app) as test_client:
         yield test_client
     # Clean up the dependency override after the test
-    app.dependency_overrides.clear() # Clears all overrides
+    app.dependency_overrides.clear()

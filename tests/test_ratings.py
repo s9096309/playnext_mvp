@@ -78,7 +78,7 @@ def test_get_ratings(db_session: Session, client: TestClient):
 
     # Create ratings linked to the AUTHENTICATED user (auth_user_id)
     rating_data_1 = schemas.RatingCreate(
-        user_id=auth_user_id,  # Crucial: Link to the authenticated user
+        user_id=auth_user_id,
         game_id=game_alpha.game_id,
         rating=4.0,
         comment="Comment for Test Game Alpha",
@@ -87,7 +87,7 @@ def test_get_ratings(db_session: Session, client: TestClient):
     crud.create_rating(db=db, rating=rating_data_1)
 
     rating_data_2 = schemas.RatingCreate(
-        user_id=auth_user_id,  # Crucial: Link to the authenticated user
+        user_id=auth_user_id,
         game_id=game_beta.game_id,
         rating=5.0,
         comment="Comment for Test Game Beta",
@@ -125,7 +125,7 @@ def test_get_ratings(db_session: Session, client: TestClient):
     for r in ratings_data:
         # Every rating returned should belong to the authenticated user
         assert r["user_id"] == auth_user_id
-        assert "game" in r  # Ensure the nested game object is present
+        assert "game" in r
 
         if r["game_id"] == game_alpha.game_id:
             assert r["rating"] == 4.0
