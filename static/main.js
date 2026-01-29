@@ -1,6 +1,6 @@
 // static/main.js
 
-const API_BASE_URL = 'http://63.181.97.82';
+const API_BASE_URL = '';
 
 document.addEventListener('DOMContentLoaded', () => {
     const logoutButton = document.getElementById('logoutButton');
