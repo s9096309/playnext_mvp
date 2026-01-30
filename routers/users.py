@@ -141,7 +141,7 @@ def delete_user(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found"
         )
-    return db_user
+    return None
 
 
 @router.put("/me", response_model=schemas.User)
@@ -166,7 +166,7 @@ def delete_current_user(
     Deletes the account of the currently authenticated user.
     """
     user_crud.delete_user(db, user_id=current_user.user_id)
-    return current_user
+    return None
 
 
 @router.get("/me/backlog", response_model=List[schemas.BacklogItem])
