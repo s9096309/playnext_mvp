@@ -26,7 +26,6 @@ class UserBase(BaseModel):
     username: str
     email: EmailStr
     igdb_id: Optional[int] = None
-    is_admin: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -42,6 +41,7 @@ class UserCreateDB(UserBase):
     hashed_password: str
     registration_date: datetime.datetime
     user_age: Optional[int] = None
+    is_admin: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -63,6 +63,7 @@ class User(UserBase):
     user_id: int
     registration_date: datetime.datetime
     user_age: Optional[int] = None
+    is_admin: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 
