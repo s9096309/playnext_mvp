@@ -25,7 +25,6 @@ class UserBase(BaseModel):
     """Base Pydantic schema for user data."""
     username: str
     email: EmailStr
-    igdb_id: Optional[int] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -52,8 +51,6 @@ class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
     password: Optional[str] = Field(None, min_length=8)
     user_age: Optional[int] = None
-    igdb_id: Optional[int] = None
-    is_admin: Optional[bool] = None
 
     model_config = ConfigDict(from_attributes=True)
 
