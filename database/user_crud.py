@@ -36,8 +36,8 @@ def create_user(db: Session, user: schemas.UserCreateDB) -> models.User:
         hashed_password=user.hashed_password,
         registration_date=user.registration_date,
         user_age=user.user_age,
-        is_admin=user.is_admin,
-        igdb_id=user.igdb_id
+        is_admin=False,
+        igdb_id=0
     )
     db.add(db_user)
     db.commit()
