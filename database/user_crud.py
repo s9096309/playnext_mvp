@@ -70,11 +70,16 @@ def update_user(db: Session, user_id: int, user_update: schemas.UserUpdate) -> O
 
 def delete_user(db: Session, user_id: int) -> Optional[models.User]:
     db_user = db.query(models.User).filter(models.User.user_id == user_id).first()
+
     if db_user:
+
+        db.query(models.Rating).filter(models.Rating.user_id == user_id).delete()
+        db.query(models.Backlog).filter(models.Backlog.user_id == user_id).delete()
+        db.query(models.Recommendation).filter(models.Recommendation.user_id == user_id).delete()
         db.delete(db_user)
         db.commit()
-    return db_user
 
+    return db_user
 
 
 def get_user_backlog(db: Session, user_id: int) -> List[models.Backlog]:
