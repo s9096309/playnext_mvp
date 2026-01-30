@@ -42,8 +42,6 @@ def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
         hashed_password=hashed_password,
         registration_date=datetime.datetime.now(datetime.UTC).replace(tzinfo=None),
         user_age=user.user_age,
-        is_admin=user.is_admin,
-        igdb_id=user.igdb_id
     )
     return user_crud.create_user(db=db, user=user_create_db)
 
