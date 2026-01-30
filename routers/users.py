@@ -118,7 +118,7 @@ def update_user(
     return db_user
 
 
-@router.delete("/{user_id}", response_model=schemas.User)
+@router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_user(
     user_id: int,
     current_user: Annotated[models.User, Depends(get_current_user)],
@@ -157,7 +157,7 @@ def update_current_user(
                                  user_update=user_update)
 
 
-@router.delete("/me", response_model=schemas.User)
+@router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
 def delete_current_user(
     current_user: Annotated[models.User, Depends(get_current_user)],
     db: SessionDep
