@@ -12,6 +12,35 @@ from database.session import SessionDep, get_db, Session
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
+@router.put("/me", response_model=schemas.User)
+def update_current_user(
+    user_update: schemas.UserUpdate,
+    current_user: Annotated[models.User, Depends(get_current_user)],
+    db: SessionDep
+):
+    """
+    Updates the profile of the currently authenticated user.
+    """
+    return user_crud.update_user(db=db, user_id=current_user.user_id,
+                                 user_update=user_update)
+
+@router.get("/me", response_model=schemas.User)
+def read_current_user(current_user: Annotated[models.User, Depends(get_current_user)]):
+    """
+    Retrieves the details of the currently authenticated user.
+    """
+    return current_user
+
+@router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
+def delete_current_user(
+    current_user: Annotated[models.User, Depends(get_current_user)],
+    db: SessionDep
+):
+    """
+    Deletes the account of the currently authenticated user.
+    """
+    user_crud.delete_user(db, user_id=current_user.user_id)
+    return None
 
 @router.post("/", response_model=schemas.User)
 def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
@@ -65,14 +94,6 @@ def read_users(
     return users
 
 
-@router.get("/me", response_model=schemas.User)
-def read_current_user(current_user: Annotated[models.User, Depends(get_current_user)]):
-    """
-    Retrieves the details of the currently authenticated user.
-    """
-    return current_user
-
-
 @router.get("/{user_id}", response_model=schemas.User)
 def read_user(
     user_id: int,
@@ -117,18 +138,6 @@ def update_user(
         )
     return db_user
 
-@router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
-def delete_current_user(
-    current_user: Annotated[models.User, Depends(get_current_user)],
-    db: SessionDep
-):
-    """
-    Deletes the account of the currently authenticated user.
-    """
-    user_crud.delete_user(db, user_id=current_user.user_id)
-    return None
-
-
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_user(
     user_id: int,
@@ -153,19 +162,6 @@ def delete_user(
             detail="User not found"
         )
     return None
-
-
-@router.put("/me", response_model=schemas.User)
-def update_current_user(
-    user_update: schemas.UserUpdate,
-    current_user: Annotated[models.User, Depends(get_current_user)],
-    db: SessionDep
-):
-    """
-    Updates the profile of the currently authenticated user.
-    """
-    return user_crud.update_user(db=db, user_id=current_user.user_id,
-                                 user_update=user_update)
 
 @router.get("/me/backlog", response_model=List[schemas.BacklogItem])
 def read_users_me_backlog(
