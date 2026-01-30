@@ -117,6 +117,17 @@ def update_user(
         )
     return db_user
 
+@router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
+def delete_current_user(
+    current_user: Annotated[models.User, Depends(get_current_user)],
+    db: SessionDep
+):
+    """
+    Deletes the account of the currently authenticated user.
+    """
+    user_crud.delete_user(db, user_id=current_user.user_id)
+    return None
+
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_user(
@@ -155,19 +166,6 @@ def update_current_user(
     """
     return user_crud.update_user(db=db, user_id=current_user.user_id,
                                  user_update=user_update)
-
-
-@router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
-def delete_current_user(
-    current_user: Annotated[models.User, Depends(get_current_user)],
-    db: SessionDep
-):
-    """
-    Deletes the account of the currently authenticated user.
-    """
-    user_crud.delete_user(db, user_id=current_user.user_id)
-    return None
-
 
 @router.get("/me/backlog", response_model=List[schemas.BacklogItem])
 def read_users_me_backlog(
