@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, UTC
 from database import user_crud
 from test_helpers import create_test_user, create_test_game
 
+
 def test_create_user(db_session: Session, client: TestClient):
     db = db_session
     user_data = {
@@ -159,8 +160,6 @@ def test_update_user_admin_authorized(db_session: Session, client: TestClient):
     assert response_data["user_id"] == user_to_update.user_id
     assert response_data["user_age"] == 40
 
-    # WICHTIG: Da wir is_admin aus dem Schema gelöscht haben, bleibt es False!
-    # Das beweist, dass der Security-Fix funktioniert.
     assert response_data["is_admin"] is False
 
 
@@ -179,9 +178,10 @@ def test_delete_user_admin_authorized(db_session: Session, client: TestClient):
     admin_user, admin_token = create_test_user(db, is_admin=True, username="admin_del", email="admin_del@example.com")
     user_to_delete, _ = create_test_user(db, is_admin=False, username="target_del", email="target_del@example.com")
     headers = {"Authorization": f"Bearer {admin_token}"}
+
     response = client.delete(f"/users/{user_to_delete.user_id}", headers=headers)
-    assert response.status_code == status.HTTP_200_OK
-    content = response.json()
-    print(f"Delete response content: {content}")
-    assert content["user_id"] == user_to_delete.user_id
-    assert content["username"] == "target_del"
+
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+
+    db_user = user_crud.get_user(db, user_id=user_to_delete.user_id)
+    assert db_user is None

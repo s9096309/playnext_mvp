@@ -90,12 +90,14 @@ def test_update_user(db_session: Session):
     user_data = schemas.UserCreateDB(username="old_name", email="old@example.com", hashed_password="oldhash",
                                      registration_date=datetime.now(UTC), user_age=20, is_admin=False)
     db_user = user_crud.create_user(db=db, user=user_data)
-    update_data = schemas.UserUpdate(username="new_name", email="new@example.com", user_age=25, is_admin=True)
+
+    update_data = schemas.UserUpdate(username="new_name", email="new@example.com", user_age=25)
+
     updated_user = user_crud.update_user(db=db, user_id=db_user.user_id, user_update=update_data)
+
     assert updated_user.username == "new_name"
     assert updated_user.email == "new@example.com"
     assert updated_user.user_age == 25
-    assert updated_user.is_admin is True
 
 
 def test_delete_user(db_session: Session):
