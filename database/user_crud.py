@@ -21,23 +21,15 @@ def get_user_by_email(db: Session, email: str) -> Optional[models.User]:
 def create_user(db: Session, user: schemas.UserCreateDB) -> models.User:
     """
     Creates a new user in the database.
-
-    Args:
-        db (Session): The database session.
-        user (schemas.UserCreateDB): The Pydantic schema containing user data
-                                      including the hashed password and registration date.
-
-    Returns:
-        models.User: The newly created SQLAlchemy User model instance.
     """
+
     db_user = models.User(
         username=user.username,
         email=user.email,
         hashed_password=user.hashed_password,
         registration_date=user.registration_date,
         user_age=user.user_age,
-        is_admin=False,
-        igdb_id=0
+        is_admin=user.is_admin
     )
     db.add(db_user)
     db.commit()

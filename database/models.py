@@ -32,7 +32,6 @@ class User(Base):
     registration_date = Column(DateTime, default=datetime.now(UTC), nullable=False)
     user_age = Column(Integer, nullable=True)
     is_admin = Column(Boolean, default=False, nullable=False)
-    igdb_id = Column(Integer, unique=True, index=True, nullable=True)
 
     recommendations = relationship("Recommendation", back_populates="user")
     ratings = relationship("Rating", back_populates="user")

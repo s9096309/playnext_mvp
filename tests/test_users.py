@@ -3,7 +3,7 @@ from fastapi import status
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta, UTC
-
+from database import user_crud
 from test_helpers import create_test_user, create_test_game
 
 def test_create_user(db_session: Session, client: TestClient):
@@ -134,26 +134,34 @@ def test_delete_user_authorized_self(db_session: Session, client: TestClient):
     db = db_session
     test_user, access_token = create_test_user(db, username="self_delete_user", email="self_delete@example.com")
     headers = {"Authorization": f"Bearer {access_token}"}
+
     response = client.delete(f"/users/{test_user.user_id}", headers=headers)
-    assert response.status_code == status.HTTP_200_OK
-    content = response.json()
-    print(f"Delete response content: {content}")
-    assert content["user_id"] == test_user.user_id
-    assert content["username"] == "self_delete_user"
+
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+
+    db_user = user_crud.get_user(db, user_id=test_user.user_id)
+    assert db_user is None
 
 
 def test_update_user_admin_authorized(db_session: Session, client: TestClient):
     db = db_session
     admin_user, admin_token = create_test_user(db, is_admin=True, username="admin_upd", email="admin_upd@example.com")
     user_to_update, _ = create_test_user(db, username="target_upd", email="target_upd@example.com")
+
     headers = {"Authorization": f"Bearer {admin_token}"}
-    updated_data = {"user_age": 40, "is_admin": True}  # Admin can change is_admin
+
+    updated_data = {"user_age": 40, "is_admin": True}
+
     response = client.put(f"/users/{user_to_update.user_id}", headers=headers, json=updated_data)
+
     assert response.status_code == status.HTTP_200_OK
     response_data = response.json()
     assert response_data["user_id"] == user_to_update.user_id
     assert response_data["user_age"] == 40
-    assert response_data["is_admin"] is True
+
+    # WICHTIG: Da wir is_admin aus dem Schema gelöscht haben, bleibt es False!
+    # Das beweist, dass der Security-Fix funktioniert.
+    assert response_data["is_admin"] is False
 
 
 def test_delete_user_not_authorized(db_session: Session, client: TestClient):
@@ -164,16 +172,6 @@ def test_delete_user_not_authorized(db_session: Session, client: TestClient):
     response = client.delete(f"/users/{user2.user_id}", headers=headers)
     assert response.status_code == status.HTTP_403_FORBIDDEN
     assert response.json() == {"detail": "Not authorized to delete this user"}
-
-
-def test_delete_user_authorized_self(db_session: Session, client: TestClient):
-    db = db_session
-    test_user, access_token = create_test_user(db, username="self_delete_user", email="self_delete@example.com")
-    headers = {"Authorization": f"Bearer {access_token}"}
-    response = client.delete(f"/users/{test_user.user_id}", headers=headers)
-    assert response.status_code == status.HTTP_200_OK
-    content = response.json()
-    assert content["user_id"] == test_user.user_id
 
 
 def test_delete_user_admin_authorized(db_session: Session, client: TestClient):
