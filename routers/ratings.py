@@ -1,6 +1,6 @@
 import datetime
 from typing import List, Annotated
-
+import html
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import joinedload, selectinload
 from starlette.responses import Response
@@ -33,12 +33,13 @@ def create_my_rating(
                             detail="You have already rated this game. Please use the PUT method to update it.")
 
     current_utc_naive = datetime.datetime.now(datetime.UTC).replace(tzinfo=None)
+    sanitized_comment = html.escape(rating_data.comment) if rating_data.comment else None
 
     db_rating = models.Rating(
         user_id=current_user.user_id,
         game_id=rating_data.game_id,
         rating=rating_data.rating,
-        comment=rating_data.comment,
+        comment=sanitized_comment,
         rating_date=rating_data.rating_date.replace(tzinfo=None) if rating_data.rating_date else current_utc_naive
     )
 
@@ -108,6 +109,8 @@ def update_my_rating(
     update_data = rating_update.model_dump(exclude_unset=True)
 
     for key, value in update_data.items():
+        if key == 'comment' and isinstance(value, str):
+            value = html.escape(value)
         setattr(db_rating, key, value)
 
     db_rating.updated_at = datetime.datetime.now(datetime.UTC).replace(tzinfo=None)

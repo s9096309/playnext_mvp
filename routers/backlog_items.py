@@ -124,8 +124,8 @@ def read_backlog_items(
     Returns:
         List[schemas.BacklogItem]: A list of backlog items.
     """
-    backlog_items = crud.get_backlog_items(db, skip=skip, limit=limit)
-    return backlog_items
+    backlog_items = crud.get_user_backlog(db, user_id=current_user.user_id)
+    return backlog_items[skip : skip + limit]
 
 
 @router.put("/{backlog_item_id}", response_model=schemas.BacklogItem)
