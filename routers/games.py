@@ -16,7 +16,8 @@ from database import schemas, models
 from database.session import get_db
 from utils import igdb_utils
 from utils.auth import get_current_user
-
+from utils.security import sanitize_html
+import re
 
 router = APIRouter(prefix="/games", tags=["Games"])
 
@@ -315,6 +316,13 @@ def search_games(
     Raises:
         HTTPException: 404 Not Found: If no games are found locally or on IGDB.
     """
+
+    if not re.match(r"^[a-zA-Z0-9\s\-\:]+$", query_str):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid search query format."
+        )
+
     db_games = crud.search_games_db(db, query=query_str)
 
     if db_games:
