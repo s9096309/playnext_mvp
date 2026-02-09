@@ -9,7 +9,8 @@ using OAuth2 password flow.
 
 from datetime import timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
+from limiter import limiter
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
@@ -25,7 +26,9 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
 @router.post("/token", response_model=schemas.Token)
+@limiter.limit("5/minute")
 async def login_for_access_token(
+    request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db)
 ):
