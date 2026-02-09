@@ -9,7 +9,7 @@ import datetime
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
-from sqlalchemy.orm import Session, joinedload # joinedload is used below
+from sqlalchemy.orm import Session, joinedload
 
 from database import crud
 from database import schemas, models
