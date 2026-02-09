@@ -17,3 +17,9 @@ routers/.DS_Store
 .elasticbeanstalk/*
 !.elasticbeanstalk/*.cfg.yml
 !.elasticbeanstalk/*.global.yml
+
+# Terraform secrets
+*.tfvars
+*.tfstate
+*.tfstate.backup
+.terraform/
