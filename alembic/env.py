@@ -15,7 +15,7 @@ DATABASE_URL = os.environ.get("DATABASE_URL")
 
 if DATABASE_URL:
     # Set the sqlalchemy.url option in the Alembic config object
-    config.set_main_option("sqlalchemy.url", DATABASE_URL)
+    config.set_main_option("sqlalchemy.url", DATABASE_URL.replace("%", "%%"))
 else:
     print("WARNING: DATABASE_URL environment variable is not set. Migrations might fail.")
     raise Exception("DATABASE_URL environment variable is not set!")
