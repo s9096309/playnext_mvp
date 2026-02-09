@@ -7,8 +7,14 @@ on application startup.
 """
 
 import uvicorn
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
+
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from limiter import limiter
+
 
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
@@ -21,7 +27,6 @@ print("--- PlayNext API application module loaded ---")
 
 BASE_DIR = Path(__file__).resolve().parent
 
-
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     """
@@ -31,26 +36,39 @@ async def lifespan(_app: FastAPI):
     yield
     print("Application shutdown.")
 
+# --- SECURITY CONFIGURATION ---
+env = os.getenv("PLAYNEXT_ENV", "development")
+
+docs_url = None if env == "production" else "/docs"
+redoc_url = None if env == "production" else "/redoc"
+
+print(f"Starting in mode: {env} (Docs enabled: {docs_url is not None})")
+# ------------------------------
 
 application = FastAPI(
     title="PlayNext API",
     description="API for managing game backlogs, ratings, and recommendations.",
-    version="0.1.0",
-    lifespan=lifespan
+    version="0.2.0",
+    lifespan=lifespan,
+    docs_url=docs_url,
+    redoc_url=redoc_url
 )
 
-@application.get("/", summary="Serve the frontend")
+# --- REGISTER RATE LIMITER---
+application.state.limiter = limiter
+application.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+# ---------------------------------
+
+application.get("/", summary="Serve the frontend")
 async def serve_frontend():
     """
     Serves the main HTML file.
     """
     return FileResponse("static/index.html")
 
-
 application.mount("/static", StaticFiles(directory=f"{BASE_DIR}/static"), name="static")
 
-
-# Configure CORS (Cross-Origin Resource Sharing) middleware
+# Configure CORS Middleware
 application.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -65,7 +83,6 @@ application.include_router(ratings.router, prefix="/users/me/ratings", tags=["Ra
 application.include_router(games.router, tags=["Games"])
 application.include_router(backlog_items.router, tags=["Backlog"])
 application.include_router(recommendations.router, tags=["Recommendations"])
-
 
 if __name__ == "__main__":
     uvicorn.run(application, host="0.0.0.0", port=8080)

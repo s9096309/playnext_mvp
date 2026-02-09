@@ -67,7 +67,7 @@ jsonschema-specifications==2024.10.1
 referencing==0.36.2
 rpds-py==0.22.3
 fastjsonschema==2.21.1
-
+slowapi
 PyYAML==6.0.2
 
 google-ai-generativelanguage==0.6.15
