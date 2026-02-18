@@ -200,7 +200,7 @@ def search_games_igdb(query: str) -> Optional[List[Dict[str, Any]]]:
     return None
 
 
-def get_game_by_id_igdb(game_id: int) -> Optional[List[Dict[str, Any]]]: # Changed return type hint
+def get_game_by_id_igdb(game_id: int) -> Optional[List[Dict[str, Any]]]:
     """
     Retrieves game details from IGDB by its unique IGDB ID using direct httpx.
 
@@ -218,12 +218,12 @@ def get_game_by_id_igdb(game_id: int) -> Optional[List[Dict[str, Any]]]: # Chang
     if byte_array:
         try:
             result = json.loads(byte_array)
-            logger.debug("IGDB get by ID result for %s: %s", game_id, result) # Debug line
+            logger.debug("IGDB get by ID result for %s: %s", game_id, result)
             return result
         except json.JSONDecodeError as e:
             logger.error("JSON decode error for game ID %s: %s. Raw response: %s", game_id, e, byte_array) # Added raw response
             return None
-    logger.debug("No byte array received from IGDB for game ID %s.", game_id) # Debug line
+    logger.debug("No byte array received from IGDB for game ID %s.", game_id)
     return None
 
 
@@ -249,7 +249,7 @@ def get_cover_url(cover_id: int) -> Optional[str]:
                 url = result[0]['url'].replace('t_thumb', 't_cover_big') # Ensure large cover
                 if not url.startswith("https:"):
                     url = "https:" + url
-                logger.debug("Cover URL for ID %s: %s", cover_id, url) # Debug line
+                logger.debug("Cover URL for ID %s: %s", cover_id, url)
                 return url
             else:
                 logger.info("No URL found for cover ID %s in response: %s", cover_id, result)
@@ -257,12 +257,11 @@ def get_cover_url(cover_id: int) -> Optional[str]:
         except json.JSONDecodeError as e:
             logger.error("JSON decode error for cover ID %s: %s. Raw response: %s", cover_id, e, byte_array) # Added raw response
             return None
-    logger.debug("No byte array received from IGDB for cover ID %s.", cover_id) # Debug line
+    logger.debug("No byte array received from IGDB for cover ID %s.", cover_id)
     return None
 
 
 # Mapping from IGDB age rating IDs to human-readable strings.
-# You can expand this mapping if needed
 IGDB_AGE_RATING_MAP: Dict[int, str] = {
     1: "3", 2: "7", 3: "12", 4: "16", 5: "18", 6: "RP", 7: "EC", 8: "E", 9: "E10+",
     10: "T", 11: "M", 12: "AO", 13: "CUSA", 14: "PEGI 3", 15: "PEGI 7", 16: "PEGI 12",
