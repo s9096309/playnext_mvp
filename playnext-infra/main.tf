@@ -92,3 +92,13 @@ output "db_endpoint" {
   value = aws_db_instance.default.endpoint
   description = "The address of your database (for env.py)"
 }
+
+resource "aws_eip" "web_eip" {
+  instance = aws_instance.web.id
+  domain   = "vpc"
+}
+
+output "elastic_ip" {
+  value = aws_eip.web_eip.public_ip
+  description = "Die feste Elastic IP Adresse"
+}

@@ -56,10 +56,9 @@ application = FastAPI(
 
 # --- REGISTER RATE LIMITER---
 application.state.limiter = limiter
-application.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
-# ---------------------------------
 
-application.get("/", summary="Serve the frontend")
+
+@application.get("/", summary="Serve the frontend")
 async def serve_frontend():
     """
     Serves the main HTML file.
