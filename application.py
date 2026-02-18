@@ -56,6 +56,7 @@ application = FastAPI(
 
 # --- REGISTER RATE LIMITER---
 application.state.limiter = limiter
+application.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 
 @application.get("/", summary="Serve the frontend")
