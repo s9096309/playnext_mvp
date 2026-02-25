@@ -22,8 +22,8 @@ python-jose==3.4.0
 passlib==1.7.4
 bcrypt==4.3.0
 PyJWT==2.10.1
-cffi>=2.0.0
-cffi==1.17.1
+cryptography>=46.0.5
+
 
 # HTTP Clients / External API Calls (IGDB/Twitch)
 requests==2.32.4
@@ -36,7 +36,6 @@ charset-normalizer==3.4.0
 certifi==2024.8.30
 urllib3==2.6.3
 igdb-api-v4==0.3.3
-igdb_api_python==1.0
 
 # Configuration
 python-dotenv==1.0.1
