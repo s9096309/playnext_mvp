@@ -43,3 +43,7 @@ python-dotenv==1.0.1
 # Utilities / Performance
 anyio==4.9.0
 orjson>=3.11.5
+
+# Testing (Required for CI/CD)
+pytest
+pytest-cov
