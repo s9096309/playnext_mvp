@@ -1,0 +1,28 @@
+---
+- name: Setup Local Workstation
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  tasks:
+    - name: Ensure required CLI tools are installed via Homebrew
+      community.general.homebrew:
+        name:
+          - kubectl
+          - jq
+          - k3sup
+        state: present
+
+    - name: Add helpful Kubernetes aliases to zsh profile
+      ansible.builtin.lineinfile:
+        path: ~/.zshrc
+        regexp: '^alias k='
+        line: 'alias k="kubectl"'
+        create: yes
+
+    - name: Set default Kubeconfig environment variable
+      ansible.builtin.lineinfile:
+        path: ~/.zshrc
+        regexp: '^export KUBECONFIG='
+        line: 'export KUBECONFIG=~/.kube/playnext_config'
+        create: yes

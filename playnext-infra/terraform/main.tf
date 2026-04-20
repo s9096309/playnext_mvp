@@ -69,15 +69,6 @@ resource "aws_instance" "web" {
 
   vpc_security_group_ids = [aws_security_group.web_sg.id]
 
-  user_data = <<-EOF
-              #!/bin/bash
-              sudo dnf update -y
-              sudo dnf install -y docker
-              sudo systemctl start docker
-              sudo systemctl enable docker
-              sudo usermod -aG docker ec2-user
-              EOF
-
   tags = {
     Name = "PlayNext-App-Terraform"
   }
@@ -100,5 +91,5 @@ resource "aws_eip" "web_eip" {
 
 output "elastic_ip" {
   value = aws_eip.web_eip.public_ip
-  description = "Die feste Elastic IP Adresse"
+  description = "Elastic IP Address"
 }

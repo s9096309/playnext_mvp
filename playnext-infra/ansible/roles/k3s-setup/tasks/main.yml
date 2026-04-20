@@ -1,0 +1,24 @@
+---
+# tasks file for k3s_setup
+
+- name: Install Docker via APT
+  ansible.builtin.apt:
+    name: docker.io
+    state: present
+
+- name: Ensure Docker service is running and enabled
+  ansible.builtin.service:
+    name: docker
+    state: started
+    enabled: yes
+
+- name: Add ubuntu user to the docker group
+  ansible.builtin.user:
+    name: ubuntu
+    groups: docker
+    append: yes
+
+- name: Install K3s (Lightweight Kubernetes)
+  ansible.builtin.shell: curl -sfL https://get.k3s.io | sh -
+  args:
+    creates: /usr/local/bin/k3s

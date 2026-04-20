@@ -1,0 +1,10 @@
+---
+plugin: amazon.aws.aws_ec2
+regions:
+  - eu-central-1
+filters:
+  instance-state-name: running
+  "tag:Environment": production
+keyed_groups:
+  - key: tags.Role
+    prefix: role
