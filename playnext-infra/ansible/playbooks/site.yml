@@ -1,0 +1,8 @@
+---
+- name: Configure PlayNext Nodes
+  hosts: role_playnext_node
+  gather_facts: yes
+
+  roles:
+    - os_hardening
+    - k3s-setup
