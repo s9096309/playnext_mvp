@@ -1,7 +1,7 @@
 # app/utils/auth.py
 
 import jwt
-from datetime import datetime, timedelta, UTC
+from datetime import datetime, timedelta, timezone
 from fastapi import HTTPException, status, Depends
 from passlib.context import CryptContext
 import os
@@ -22,9 +22,9 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
 def create_access_token(data: dict, expires_delta: timedelta = None):
     to_encode = data.copy()
     if expires_delta:
-        expire = datetime.now(UTC) + expires_delta
+        expire = datetime.now(timezone.utc) + expires_delta
     else:
-        expire = datetime.now(UTC) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
@@ -40,7 +40,6 @@ def get_password_hash(password):
 
 def decode_access_token(token: str):
     try:
-        # Ensure SECRET_KEY is not None before attempting decode
         if SECRET_KEY is None:
             raise ValueError("SECRET_KEY is not set.")
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
@@ -90,4 +89,3 @@ def get_current_admin_user(current_user: models.User = Depends(get_current_user)
             detail="Not authorized to access this resource. Admin privileges required."
         )
     return current_user
-

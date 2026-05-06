@@ -4,7 +4,12 @@ import re
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 
-import google.generativeai as genai
+try:
+    from google import genai
+except ImportError:
+    # Fallback for tricky namespace environments
+    import google.genai as genai
+
 from dotenv import load_dotenv
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
@@ -14,10 +19,9 @@ from database import user_crud, schemas
 from database.session import get_db
 from utils import igdb_utils
 
-
 load_dotenv()
 
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+# The genai.configure() method is removed in the new SDK
 
 router = APIRouter(prefix="/recommendations", tags=["Recommendations"])
 
@@ -25,20 +29,51 @@ RECOMMENDATION_CACHE_DURATION_HOURS = 24
 
 
 async def generate_recommendations_gemini(prompt: str) -> str:
-    model = genai.GenerativeModel('gemini-2.0-flash')
-    response = model.generate_content(prompt)
-    return response.text
+    try:
+        client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+
+        response = client.models.generate_content(
+            model='gemini-2.0-flash',
+            contents=prompt
+        )
+        return response.text
+    except Exception as e:
+        print(f"Gemini API failed (likely 429 Rate Limit): {e}")
+        print("Initiating Graceful Degradation: Returning fallback recommendations.")
+
+        # This exact string mimics the JSON structure Gemini normally returns
+        fallback_json = """
+        ```json
+        [
+          {
+            "name": "The Witcher 3: Wild Hunt",
+            "genre": "RPG",
+            "reasoning": "Our AI engine is currently resting, but this is a universally acclaimed masterpiece with a deep narrative."
+          },
+          {
+            "name": "Hades",
+            "genre": "Roguelike",
+            "reasoning": "A fallback favorite: incredible replayability and extremely satisfying combat mechanics."
+          },
+          {
+            "name": "Stardew Valley",
+            "genre": "Simulation",
+            "reasoning": "To help you relax after dealing with API rate limits. A perfect, cozy farming simulation."
+          }
+        ]
+        ```
+        """
+        return fallback_json
 
 
 @router.get("/user", response_model=schemas.RecommendationResponse)
 async def get_user_recommendations(
-    user_id: int,
-    db: Session = Depends(get_db),
-    force_generate: bool = Query(
-        False,
-        description="Set to true to force new recommendations generation, "
-                    "bypassing cache."
-    )
+        user_id: int,
+        db: Session = Depends(get_db),
+        force_generate: bool = Query(
+            False,
+            description="Set to true to force new recommendations generation, bypassing cache."
+        )
 ):
     db_user = user_crud.get_user(db, user_id)
     if not db_user:

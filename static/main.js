@@ -1,6 +1,11 @@
 // static/main.js
 
-const API_BASE_URL = '';
+
+window.API_BASE_URL = window.location.origin;
+
+function getAccessToken() {
+        return localStorage.getItem('accessToken') || localStorage.getItem('access_token');
+    }
 
 document.addEventListener('DOMContentLoaded', () => {
     const logoutButton = document.getElementById('logoutButton');
@@ -8,9 +13,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const registerLink = document.getElementById('registerLink');
     const welcomeMessage = document.getElementById('welcomeMessage');
 
-    function getAccessToken() {
-        return localStorage.getItem('accessToken');
-    }
 
     function checkLoginStatus() {
         const token = getAccessToken();

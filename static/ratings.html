@@ -41,33 +41,33 @@
             </form>
             <div id="ratingMessage" class="message"></div>
         </div>
-
-        <div id="ratedGamesList">
-            </div>
+        <div id="ratedGamesList"></div>
     </main>
 
     <script src="/static/main.js"></script>
-
     <script>
-        const API_BASE_URL = '';
         document.addEventListener('DOMContentLoaded', () => {
             const gameSelect = document.getElementById('gameSelect');
-            const ratingMessage = document.getElementById('ratingMessage');
+            const rateForm = document.getElementById('rateGameForm');
+            const messageDiv = document.getElementById('ratingMessage');
 
             async function populateGamesDropdown() {
-                const token = localStorage.getItem('accessToken');
+                const token = getAccessToken();
                 if (!token) {
                     gameSelect.innerHTML = '<option value="">Please log in to see games</option>';
                     return;
                 }
+
                 try {
-                    const response = await fetch(`${API_BASE_URL}/games/`, {
+                    const response = await fetch(`${window.API_BASE_URL}/games/`, {
                         headers: { 'Authorization': `Bearer ${token}` }
                     });
-                    if (!response.ok) throw new Error('Failed to fetch games');
+
+                    if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
 
                     const games = await response.json();
                     gameSelect.innerHTML = '<option value="">Select a game to rate</option>';
+
                     games.forEach(game => {
                         const option = document.createElement('option');
                         option.value = game.game_id;
@@ -75,18 +75,48 @@
                         gameSelect.appendChild(option);
                     });
                 } catch (error) {
-                    console.error('Error populating games dropdown:', error);
+                    console.error('Dropdown Error:', error);
                     gameSelect.innerHTML = '<option value="">Error loading games</option>';
                 }
             }
 
-            populateGamesDropdown();
-
-            // Add your form submission logic for creating ratings here
-            document.getElementById('rateGameForm').addEventListener('submit', async (e) => {
+            rateForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                // Logic to POST the new rating to your /ratings/ endpoint
+                const token = getAccessToken();
+
+                const payload = {
+                    game_id: parseInt(document.getElementById('gameSelect').value),
+                    rating: parseFloat(document.getElementById('ratingInput').value),
+                    comment: document.getElementById('reviewInput').value
+                };
+
+                try {
+                    const response = await fetch(`${window.API_BASE_URL}/users/me/ratings/`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (response.ok) {
+                        messageDiv.textContent = "Rating submitted successfully!";
+                        messageDiv.style.color = "green";
+                        rateForm.reset();
+                    } else {
+                        const errorData = await response.json();
+                        messageDiv.textContent = `Error: ${errorData.detail || "Submission failed"}`;
+                        messageDiv.style.color = "red";
+                    }
+                } catch (error) {
+                    console.error("Submit Error:", error);
+                    messageDiv.textContent = "Connection error. Is the server running?";
+                    messageDiv.style.color = "red";
+                }
             });
+
+            populateGamesDropdown();
         });
     </script>
 </body>
