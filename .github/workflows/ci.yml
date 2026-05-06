@@ -8,6 +8,9 @@ on:
     branches:
       - main
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
@@ -25,18 +28,19 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install pylint
+        # Explicitly install test and new AI dependencies to prevent CI drift
+        pip install pylint pytest pytest-cov google-genai requests
 
     - name: Set up environment variables for Secrets
       run: |
         # IMPORTANT: For CI tests, explicitly set DATABASE_URL to in-memory SQLite
-        # This ensures the 'engine' in session.py initializes correctly during lifespan.
         echo "DATABASE_URL=sqlite:///:memory:" >> $GITHUB_ENV
 
-        printf "SECRET_KEY=%s\n" "${{ secrets.JWT_SECRET_KEY }}" >> $GITHUB_ENV
-        printf "GEMINI_API_KEY=%s\n" "${{ secrets.GEMINI_API_KEY }}" >> $GITHUB_ENV
-        printf "IGDB_CLIENT_ID=%s\n" "${{ secrets.IGDB_CLIENT_ID }}" >> $GITHUB_ENV
-        printf "IGDB_CLIENT_SECRET=%s\n" "${{ secrets.IGDB_CLIENT_SECRET }}" >> $GITHUB_ENV
+        # Pulling from GitHub Repository Secrets
+        echo "SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}" >> $GITHUB_ENV
+        echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> $GITHUB_ENV
+        echo "IGDB_CLIENT_ID=${{ secrets.IGDB_CLIENT_ID }}" >> $GITHUB_ENV
+        echo "IGDB_CLIENT_SECRET=${{ secrets.IGDB_CLIENT_SECRET }}" >> $GITHUB_ENV
 
     - name: Run Tests with Coverage
       env:
