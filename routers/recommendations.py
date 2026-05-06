@@ -7,7 +7,6 @@ from typing import List, Optional
 try:
     from google import genai
 except ImportError:
-    # Fallback for tricky namespace environments
     import google.genai as genai
 
 from dotenv import load_dotenv
